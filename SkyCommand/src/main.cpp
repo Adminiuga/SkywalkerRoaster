@@ -1,8 +1,7 @@
 //#define __DEBUG__
 //#define __WARN__
 
-//#define USE_TIMER_1 true
-#include "TimerInterrupt.h"
+#include <Arduino.h>
 #include <limits.h>
 
 const int txPin = 3;
@@ -37,7 +36,7 @@ void setControlChecksum() {
   sendBuffer[controllerLength - 1] = sum;
 }
 
-bool setValue(uint8_t* bytePtr, uint8_t v) {
+void setValue(uint8_t* bytePtr, uint8_t v) {
   *bytePtr = v;
   setControlChecksum();  // Always keep the checksum updated.
 }
@@ -240,6 +239,8 @@ bool itsbeentoolong() {
   if (duration > timeout) {
     shutdown();  //We turn everything off
   }
+
+  return duration > timeout;
 }
 
 void handleCHAN() {
