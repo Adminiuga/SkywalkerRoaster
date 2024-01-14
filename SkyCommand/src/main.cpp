@@ -4,16 +4,13 @@
 #include <Arduino.h>
 #include <limits.h>
 
+#include "roaster.h"
+
 const int txPin = 3;
 const int rxPin = 2;
 
-const int preamble = 7000;
-const int one_length = 1200;
-const int roasterLength = 7;
-const int controllerLength = 6;
-
-uint8_t receiveBuffer[roasterLength];
-uint8_t sendBuffer[controllerLength];
+uint8_t receiveBuffer[ROASTER_MESSAGE_LENGTH];
+uint8_t sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH];
 
 int ventByte = 0;
 int drumByte = 3;
@@ -30,10 +27,10 @@ char CorF = 'F';
 
 void setControlChecksum() {
   uint8_t sum = 0;
-  for (int i = 0; i < (controllerLength - 1); i++) {
+  for (unsigned int i = 0; i < (ROASTER_CONTROLLER_MESSAGE_LENGTH - 1); i++) {
     sum += sendBuffer[i];
   }
-  sendBuffer[controllerLength - 1] = sum;
+  sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH - 1] = sum;
 }
 
 void setValue(uint8_t* bytePtr, uint8_t v) {
@@ -42,7 +39,7 @@ void setValue(uint8_t* bytePtr, uint8_t v) {
 }
 
 void shutdown() {  //Turn everything off!
-  for (int i = 0; i < controllerLength; i++) {
+  for (unsigned int i = 0; i < ROASTER_CONTROLLER_MESSAGE_LENGTH; i++) {
     sendBuffer[i] = 0;
   }
 }
@@ -61,7 +58,7 @@ void sendMessage() {
   delayMicroseconds(3800);
 
   //send Message
-  for (int i = 0; i < controllerLength; i++) {
+  for (unsigned int i = 0; i < ROASTER_CONTROLLER_MESSAGE_LENGTH; i++) {
     for (int j = 0; j < 8; j++) {
       if (bitRead(sendBuffer[i], j) == 1) {
         pulsePin(txPin, 1500);  //delay for a 1
@@ -103,11 +100,11 @@ double calculateTemp() {
 }
 
 void getMessage(int bytes, int pin) {
-  unsigned long timeIntervals[roasterLength * 8];
+  unsigned long timeIntervals[ROASTER_MESSAGE_LENGTH * 8];
   unsigned long pulseDuration = 0;
   int bits = bytes * 8;
 
-  while (pulseDuration < preamble) {  //Wait for it or exut
+  while (pulseDuration < ROASTER_PREAMBLE_LENGTH_US) {  //Wait for it or exut
     pulseDuration = pulseIn(pin, LOW);
   }
 
@@ -121,7 +118,7 @@ void getMessage(int bytes, int pin) {
 
   for (int i = 0; i < bits; i++) {  //Convert timings to bits
     //Bits are received in LSB order..
-    if (timeIntervals[i] > one_length) {  // we received a 1
+    if (timeIntervals[i] > ROASTER_ONE_LENGTH_US) {  // we received a 1
       receiveBuffer[i / 8] |= (1 << (i % 8));
     }
   }
@@ -129,7 +126,7 @@ void getMessage(int bytes, int pin) {
 
 bool calculateRoasterChecksum() {
   uint8_t sum = 0;
-  for (int i = 0; i < (roasterLength - 1); i++) {
+  for (unsigned int i = 0; i < (ROASTER_MESSAGE_LENGTH - 1); i++) {
     sum += receiveBuffer[i];
   }
 
@@ -137,9 +134,9 @@ bool calculateRoasterChecksum() {
   Serial.print("sum: ");
   Serial.print(sum, HEX);
   Serial.print(" Checksum Byte: ");
-  Serial.println(receiveBuffer[roasterLength - 1], HEX);
+  Serial.println(receiveBuffer[ROASTER_MESSAGE_LENGTH - 1], HEX);
 #endif
-  return sum == receiveBuffer[roasterLength - 1];
+  return sum == receiveBuffer[ROASTER_MESSAGE_LENGTH - 1];
 }
 
 void printBuffer(int bytes) {
@@ -160,11 +157,11 @@ void getRoasterMessage() {
 
   while (!passedChecksum) {
     count += 1;
-    getMessage(roasterLength, rxPin);
+    getMessage(ROASTER_MESSAGE_LENGTH, rxPin);
     passedChecksum = calculateRoasterChecksum();
   }
 #ifdef __DEBUG__
-  printBuffer(roasterLength);
+  printBuffer(ROASTER_MESSAGE_LENGTH);
 #endif
 
 #ifdef __WARN__
