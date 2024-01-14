@@ -6,4 +6,13 @@
 #define ROASTER_MESSAGE_LENGTH              7U
 #define ROASTER_CONTROLLER_MESSAGE_LENGTH   6U
 
+// Roaster message structure
+#define ROASTER_MESSAGE_BYTE_VENT           0
+#define ROASTER_MESSAGE_BYTE_FILTER         1
+#define ROASTER_MESSAGE_BYTE_COOL           2
+#define ROATER_MESSAGE_BYTE_DRUM            3
+#define ROASTER_MESSAGE_BYTE_HEAT           4
+#define ROASTER_MESSAGE_BYTE_CRC            5
+
+
 #endif  // __ROASTER_H

@@ -12,13 +12,6 @@ const int rxPin = 2;
 uint8_t receiveBuffer[ROASTER_MESSAGE_LENGTH];
 uint8_t sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH];
 
-int ventByte = 0;
-int drumByte = 3;
-int coolByte = 2;
-int filterByte = 1;
-int heatByte = 4;
-int checkByte = 5;
-
 double temp = 0.0;
 
 unsigned long time = 0;
@@ -176,37 +169,37 @@ void getRoasterMessage() {
 }
 void handleHEAT(uint8_t value) {
   if (value >= 0 && value <= 100) {
-    setValue(&sendBuffer[heatByte], value);
+    setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_HEAT], value);
   }
   time = micros();
 }
 
 void handleVENT(uint8_t value) {
   if (value >= 0 && value <= 100) {
-    setValue(&sendBuffer[ventByte], value);
+    setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_VENT], value);
   }
   time = micros();
 }
 
 void handleCOOL(uint8_t value) {
   if (value >= 0 && value <= 100) {
-    setValue(&sendBuffer[coolByte], value);
+    setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_COOL], value);
   }
   time = micros();
 }
 
 void handleFILTER(uint8_t value) {
   if (value >= 0 && value <= 100) {
-    setValue(&sendBuffer[filterByte], value);
+    setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_FILTER], value);
   }
   time = micros();
 }
 
 void handleDRUM(uint8_t value) {
   if (value != 0) {
-    setValue(&sendBuffer[drumByte], 100);
+    setValue(&sendBuffer[ROATER_MESSAGE_BYTE_DRUM], 100);
   } else {
-    setValue(&sendBuffer[drumByte], 0);
+    setValue(&sendBuffer[ROATER_MESSAGE_BYTE_DRUM], 0);
   }
   time = micros();
 }
@@ -218,9 +211,9 @@ void handleREAD() {
   Serial.print(',');
   Serial.print(temp);
   Serial.print(',');
-  Serial.print(sendBuffer[heatByte]);
+  Serial.print(sendBuffer[ROASTER_MESSAGE_BYTE_HEAT]);
   Serial.print(',');
-  Serial.print(sendBuffer[ventByte]);
+  Serial.print(sendBuffer[ROASTER_MESSAGE_BYTE_VENT]);
   Serial.print(',');
   Serial.println('0');
 
