@@ -2,7 +2,6 @@
 //#define __WARN__
 
 #include <Arduino.h>
-#include <limits.h>
 
 #include "roaster.h"
 
@@ -219,9 +218,6 @@ void handleREAD() {
 bool itsbeentoolong() {
   unsigned long now = micros();
   unsigned long duration = now - time;
-  if (duration < 0) {
-    duration = (ULONG_MAX - time) + now;  //I think this is right.. right?
-  }
   if (duration > (TC4_COMM_TIMEOUT_MS * 1000)) {
     shutdown();  //We turn everything off
   }
@@ -234,16 +230,10 @@ void handleCHAN() {
 }
 
 void setup() {
-  //ok.. Talking to myself here.. but lets do a sanity check.
-  //The idea is that the loop will handle any requests from serial.
-  //While the timer which runs every 10ms will send the control message to the roaster.
   Serial.begin(115200);
   Serial.setTimeout(100);
   pinMode(CONTROLLER_PIN_TX, OUTPUT);
   shutdown();
-
-  //ITimer1.init();
-  //ITimer1.attachInterruptInterval(750, sendMessage);
 }
 
 void loop() {
