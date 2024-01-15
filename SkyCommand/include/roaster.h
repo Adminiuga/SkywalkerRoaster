@@ -14,5 +14,7 @@
 #define ROASTER_MESSAGE_BYTE_HEAT           4
 #define ROASTER_MESSAGE_BYTE_CRC            5
 
+// TC4 protocol communication timeout in milliseconds
+#define TC4_COMM_TIMEOUT_MS                 10000UL
 
 #endif  // __ROASTER_H

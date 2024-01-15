@@ -6,16 +6,12 @@
 
 #include "roaster.h"
 
-const int txPin = 3;
-const int rxPin = 2;
-
 uint8_t receiveBuffer[ROASTER_MESSAGE_LENGTH];
 uint8_t sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH];
 
 double temp = 0.0;
 
 unsigned long time = 0;
-unsigned long timeout = 10000000;
 char CorF = 'F';
 
 void setControlChecksum() {
@@ -47,16 +43,16 @@ void pulsePin(int pin, int duration) {
 
 void sendMessage() {
   //send Preamble
-  pulsePin(txPin, 7500);
+  pulsePin(CONTROLLER_PIN_TX, 7500);
   delayMicroseconds(3800);
 
   //send Message
   for (unsigned int i = 0; i < ROASTER_CONTROLLER_MESSAGE_LENGTH; i++) {
     for (int j = 0; j < 8; j++) {
       if (bitRead(sendBuffer[i], j) == 1) {
-        pulsePin(txPin, 1500);  //delay for a 1
+        pulsePin(CONTROLLER_PIN_TX, 1500);  //delay for a 1
       } else {
-        pulsePin(txPin, 650);  //delay for a 0
+        pulsePin(CONTROLLER_PIN_TX, 650);  //delay for a 0
       }
       delayMicroseconds(750);  //delay between bits
     }
@@ -150,7 +146,7 @@ void getRoasterMessage() {
 
   while (!passedChecksum) {
     count += 1;
-    getMessage(ROASTER_MESSAGE_LENGTH, rxPin);
+    getMessage(ROASTER_MESSAGE_LENGTH, CONTROLLER_PIN_RX);
     passedChecksum = calculateRoasterChecksum();
   }
 #ifdef __DEBUG__
@@ -226,11 +222,11 @@ bool itsbeentoolong() {
   if (duration < 0) {
     duration = (ULONG_MAX - time) + now;  //I think this is right.. right?
   }
-  if (duration > timeout) {
+  if (duration > (TC4_COMM_TIMEOUT_MS * 1000)) {
     shutdown();  //We turn everything off
   }
 
-  return duration > timeout;
+  return duration > (TC4_COMM_TIMEOUT_MS * 1000);
 }
 
 void handleCHAN() {
@@ -243,7 +239,7 @@ void setup() {
   //While the timer which runs every 10ms will send the control message to the roaster.
   Serial.begin(115200);
   Serial.setTimeout(100);
-  pinMode(txPin, OUTPUT);
+  pinMode(CONTROLLER_PIN_TX, OUTPUT);
   shutdown();
 
   //ITimer1.init();
