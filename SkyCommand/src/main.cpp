@@ -4,7 +4,6 @@
 #include <Arduino.h>
 
 #ifdef USE_LCD
-#include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -35,9 +34,6 @@ void setupLCD(void) {
   } else {
     Serial.println("Adafruit_SSD1306 initialized successfuly");
   }
-  display.display();
-  delay(2000); // Pause for 2 seconds
-
 }
 
 void testLCD(void) {
@@ -50,7 +46,7 @@ void testLCD(void) {
 
   display.setTextColor(SSD1306_BLACK, SSD1306_WHITE); // Draw 'inverse' text
   display.println(3.141592);
-  //display.display();
+  display.display();
 }
 #else
 #define setupLCD(x)
@@ -277,10 +273,11 @@ void handleCHAN() {
 void setup() {
   Serial.begin(115200);
   Serial.setTimeout(100);
+  setupLCD();
+
   pinMode(CONTROLLER_PIN_TX, OUTPUT);
   shutdown();
 
-  setupLCD();
   testLCD();
 }
 
