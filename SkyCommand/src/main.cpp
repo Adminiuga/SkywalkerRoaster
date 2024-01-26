@@ -48,6 +48,49 @@ void welcomeLCD(void) {
   display.print(0xff, HEX);
   display.display();
 }
+
+void updateLCD(void) {
+  static unsigned long lcd_last_tick = micros();
+  unsigned long tick = micros();
+
+  if ((tick - lcd_last_tick) < (unsigned long)(UPDATE_LCD_PERIOD_MS * 1000)) {
+    // no need to update yet
+    return;
+  }
+
+  lcd_last_tick = tick;
+  display.clearDisplay();
+  display.setCursor(0,0);
+  display.print(F("RSTR Temp: "));
+  display.print(temp);
+  if (CorF == 'F') {
+    display.println(F("F"));
+  } else {
+    display.println(F("C"));
+  }
+
+  // New line
+  display.print(F("Heat: "));
+  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_HEAT], 16);
+  display.print(F(" Vent: "));
+  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_VENT], 16);
+  display.println();
+
+  // New line
+  display.print(F("Fltr: "));
+  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_FILTER], 16);
+  display.print(F(" Cool: "));
+  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_COOL], 16);
+  display.println();
+
+  // New line
+  if (sendBuffer[ROATER_MESSAGE_BYTE_DRUM]) {
+    display.println(F("Drum is On"));
+  } else {
+    display.println(F("Drum is Off"));
+  }
+  display.display();
+}
 #else
 #define setupLCD(x)
 #define welcomeLCD(x)
@@ -336,4 +379,6 @@ void loop() {
       if (split >= 0) CorF = input.charAt(split + 1);
     }
   }
+
+  updateLCD();
 }
