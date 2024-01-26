@@ -22,8 +22,9 @@ char CorF = 'F';
 
 #ifdef USE_LCD
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-void testLCD(void);
 void setupLCD(void);
+void welcomeLCD(void);
+void updateLCD(void);
 
 void setupLCD(void) {
   Serial.print("OLED address: ");
@@ -36,21 +37,21 @@ void setupLCD(void) {
   }
 }
 
-void testLCD(void) {
+void welcomeLCD(void) {
   display.clearDisplay();
 
-  display.setTextSize(1);             // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE);        // Draw white text
-  display.setCursor(0,0);             // Start at top-left corner
-  display.println(F("Hello, world!"));
-
-  display.setTextColor(SSD1306_BLACK, SSD1306_WHITE); // Draw 'inverse' text
-  display.println(3.141592);
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,0);
+  display.println(F("Skyduino Roaster"));
+  display.print(F("Version: 0x"));
+  display.print(0xff, HEX);
   display.display();
 }
 #else
 #define setupLCD(x)
-#define testLCD(x)
+#define welcomeLCD(x)
+#define updateLCD(x)
 #endif
 
 
@@ -278,7 +279,7 @@ void setup() {
   pinMode(CONTROLLER_PIN_TX, OUTPUT);
   shutdown();
 
-  testLCD();
+  welcomeLCD();
 }
 
 void loop() {
