@@ -3,6 +3,13 @@
 
 #include <Arduino.h>
 
+#ifdef USE_LCD
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+#endif
+
 #include "roaster.h"
 
 uint8_t receiveBuffer[ROASTER_MESSAGE_LENGTH];
@@ -12,6 +19,84 @@ double temp = 0.0;
 
 unsigned long time = 0;
 char CorF = 'F';
+
+#ifdef USE_LCD
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+void setupLCD(void);
+void welcomeLCD(void);
+void updateLCD(void);
+
+void setupLCD(void) {
+  Serial.print("OLED address: ");
+  Serial.println(SCREEN_ADDRESS);
+  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+      Serial.println(F("SSD1306 allocation failed"));
+      for(;;);
+  } else {
+    Serial.println("Adafruit_SSD1306 initialized successfuly");
+  }
+}
+
+void welcomeLCD(void) {
+  display.clearDisplay();
+
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,0);
+  display.println(F("Skyduino Roaster"));
+  display.print(F("Version: 0x"));
+  display.print(0xff, HEX);
+  display.display();
+}
+
+void updateLCD(void) {
+  static unsigned long lcd_last_tick = micros();
+  unsigned long tick = micros();
+
+  if ((tick - lcd_last_tick) < (unsigned long)(UPDATE_LCD_PERIOD_MS * 1000)) {
+    // no need to update yet
+    return;
+  }
+
+  lcd_last_tick = tick;
+  display.clearDisplay();
+  display.setCursor(0,0);
+  display.print(F("RSTR Temp: "));
+  display.print(temp);
+  if (CorF == 'F') {
+    display.println(F("F"));
+  } else {
+    display.println(F("C"));
+  }
+
+  // New line
+  display.print(F("Heat: "));
+  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_HEAT], 16);
+  display.print(F(" Vent: "));
+  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_VENT], 16);
+  display.println();
+
+  // New line
+  display.print(F("Fltr: "));
+  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_FILTER], 16);
+  display.print(F(" Cool: "));
+  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_COOL], 16);
+  display.println();
+
+  // New line
+  if (sendBuffer[ROATER_MESSAGE_BYTE_DRUM]) {
+    display.println(F("Drum is On"));
+  } else {
+    display.println(F("Drum is Off"));
+  }
+  display.display();
+}
+#else
+#define setupLCD(x)
+#define welcomeLCD(x)
+#define updateLCD(x)
+#endif
+
 
 void setControlChecksum() {
   uint8_t sum = 0;
@@ -232,8 +317,12 @@ void handleCHAN() {
 void setup() {
   Serial.begin(115200);
   Serial.setTimeout(100);
+  setupLCD();
+
   pinMode(CONTROLLER_PIN_TX, OUTPUT);
   shutdown();
+
+  welcomeLCD();
 }
 
 void loop() {
@@ -290,4 +379,6 @@ void loop() {
       if (split >= 0) CorF = input.charAt(split + 1);
     }
   }
+
+  updateLCD();
 }
