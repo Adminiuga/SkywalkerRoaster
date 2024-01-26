@@ -62,6 +62,15 @@ void updateLCD(void) {
   lcd_last_tick = tick;
   display.clearDisplay();
   display.setCursor(0,0);
+  if (roaster_sync) {
+    display.setTextColor(SSD1306_WHITE);
+    display.println(F("Sync"));
+  } else {
+    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    display.println(F("Sync Loss"));
+  }
+  
+  display.setTextColor(SSD1306_WHITE);
   display.print(F("RSTR Temp: "));
   display.print(temp);
   if (CorF == 'F') {
@@ -178,6 +187,12 @@ bool getMessage(int bytes, int pin) {
   unsigned long pulseDuration = 0;
   int bits = bytes * 8;
 
+  // clear buffer and reset checksum
+  for (uint8_t i=0; i < ROASTER_MESSAGE_LENGTH; i++) {
+    receiveBuffer[i] = 0;
+  }
+  receiveBuffer[ROASTER_MESSAGE_BYTE_CRC] = 0x55;
+
   pulseDuration = pulseIn(pin, LOW);
   if ( (pulseDuration == 0)
        || (pulseDuration < ROASTER_PREAMBLE_LENGTH_US)) {
@@ -238,8 +253,8 @@ bool getRoasterMessage() {
   if ( !( getMessage(ROASTER_MESSAGE_LENGTH, CONTROLLER_PIN_RX)
           and calculateRoasterChecksum())) {
     // timeout receiving message or receiving it correctly
-    count++;
-    return (count > MESSAGE_RX_MAX_ATTEMPTS);
+    if ( count < MESSAGE_RX_MAX_ATTEMPTS) count++;  // don't overflow
+    return (count < MESSAGE_RX_MAX_ATTEMPTS) && roaster_sync;
   }
 
   // received message and passed checksum verification
@@ -258,7 +273,9 @@ bool getRoasterMessage() {
 #endif
 
   temp = calculateTemp();
+  return true;
 }
+
 void handleHEAT(uint8_t value) {
   if (value >= 0 && value <= 100) {
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_HEAT], value);
