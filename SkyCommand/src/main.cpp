@@ -10,12 +10,17 @@
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 #endif
 
+#ifdef USE_THERMOCOUPLE
+#include "thermocouple.h"
+#endif
+
 #include "roaster.h"
 
 uint8_t receiveBuffer[ROASTER_MESSAGE_LENGTH];
 uint8_t sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH];
 
 double temp = 0.0;
+double tc_temp_c = 0.0;
 
 static ustick_t tc4LastTick = 0;
 char CorF = 'F';
@@ -359,6 +364,10 @@ void setup() {
   shutdown();
 
   welcomeLCD();
+
+#ifdef USE_THERMOCOUPLE
+  setupThermoCouple();
+#endif
 }
 
 void loop() {
