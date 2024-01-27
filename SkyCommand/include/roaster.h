@@ -20,4 +20,6 @@
 // declare sync loss if fail to receive message n times
 #define MESSAGE_RX_MAX_ATTEMPTS             5
 
+typedef unsigned long ustick_t;
+
 #endif  // __ROASTER_H
