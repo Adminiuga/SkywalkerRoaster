@@ -17,7 +17,7 @@ uint8_t sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH];
 
 double temp = 0.0;
 
-unsigned long time = 0;
+static ustick_t tc4LastTick = 0;
 char CorF = 'F';
 static bool roaster_sync = false;
 
@@ -51,9 +51,9 @@ void welcomeLCD(void) {
 }
 
 void updateLCD(void) {
-  static unsigned long lcd_last_tick = micros();
+  static ustick_t lcd_last_tick = micros();
   static bool invert_text = false;
-  unsigned long tick = micros();
+  ustick_t tick = micros();
 
   if ((tick - lcd_last_tick) < (unsigned long)(UPDATE_LCD_PERIOD_MS * 1000)) {
     // no need to update yet
@@ -286,28 +286,28 @@ void handleHEAT(uint8_t value) {
   if (value >= 0 && value <= 100) {
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_HEAT], value);
   }
-  time = micros();
+  tc4LastTick = micros();
 }
 
 void handleVENT(uint8_t value) {
   if (value >= 0 && value <= 100) {
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_VENT], value);
   }
-  time = micros();
+  tc4LastTick = micros();
 }
 
 void handleCOOL(uint8_t value) {
   if (value >= 0 && value <= 100) {
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_COOL], value);
   }
-  time = micros();
+  tc4LastTick = micros();
 }
 
 void handleFILTER(uint8_t value) {
   if (value >= 0 && value <= 100) {
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_FILTER], value);
   }
-  time = micros();
+  tc4LastTick = micros();
 }
 
 void handleDRUM(uint8_t value) {
@@ -316,7 +316,7 @@ void handleDRUM(uint8_t value) {
   } else {
     setValue(&sendBuffer[ROATER_MESSAGE_BYTE_DRUM], 0);
   }
-  time = micros();
+  tc4LastTick = micros();
 }
 
 void handleREAD() {
@@ -332,12 +332,12 @@ void handleREAD() {
   Serial.print(',');
   Serial.println('0');
 
-  time = micros();
+  tc4LastTick = micros();
 }
 
 bool itsbeentoolong() {
-  unsigned long now = micros();
-  unsigned long duration = now - time;
+  ustick_t now = micros();
+  ustick_t duration = now - tc4LastTick;
   if (duration > (TC4_COMM_TIMEOUT_MS * 1000)) {
     shutdown();  //We turn everything off
   }
