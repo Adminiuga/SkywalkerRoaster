@@ -19,6 +19,7 @@ double temp = 0.0;
 
 unsigned long time = 0;
 char CorF = 'F';
+static bool roaster_sync = false;
 
 #ifdef USE_LCD
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -51,6 +52,7 @@ void welcomeLCD(void) {
 
 void updateLCD(void) {
   static unsigned long lcd_last_tick = micros();
+  static bool invert_text = false;
   unsigned long tick = micros();
 
   if ((tick - lcd_last_tick) < (unsigned long)(UPDATE_LCD_PERIOD_MS * 1000)) {
@@ -61,6 +63,20 @@ void updateLCD(void) {
   lcd_last_tick = tick;
   display.clearDisplay();
   display.setCursor(0,0);
+  if (!roaster_sync) {
+    if (invert_text) {
+      display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    } else {
+      display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+    }
+    invert_text = !invert_text;
+    display.setTextSize(2);
+    display.println(F("Sync Loss"));
+    display.display();
+    return;
+  }
+  
+  display.setTextColor(SSD1306_WHITE);
   display.print(F("RSTR Temp: "));
   display.print(temp);
   if (CorF == 'F') {
@@ -172,17 +188,28 @@ double calculateTemp() {
   return v;
 }
 
-void getMessage(int bytes, int pin) {
+bool getMessage(int bytes, int pin) {
   unsigned long timeIntervals[ROASTER_MESSAGE_LENGTH * 8];
   unsigned long pulseDuration = 0;
   int bits = bytes * 8;
 
-  while (pulseDuration < ROASTER_PREAMBLE_LENGTH_US) {  //Wait for it or exut
-    pulseDuration = pulseIn(pin, LOW);
+  // clear buffer and reset checksum
+  for (uint8_t i=0; i < ROASTER_MESSAGE_LENGTH; i++) {
+    receiveBuffer[i] = 0;
+  }
+  receiveBuffer[ROASTER_MESSAGE_BYTE_CRC] = 0x55;
+
+  pulseDuration = pulseIn(pin, LOW);
+  if ( (pulseDuration == 0)
+       || (pulseDuration < ROASTER_PREAMBLE_LENGTH_US)) {
+    // did not detect preamble
+    return false;
   }
 
   for (int i = 0; i < bits; i++) {  //Read the proper number of bits..
-    timeIntervals[i] = pulseIn(pin, LOW);
+    pulseDuration = pulseIn(pin, LOW);
+    if (pulseDuration == 0) return false;
+    timeIntervals[i] = pulseDuration;
   }
 
   for (int i = 0; i < 7; i++) {  //zero that buffer
@@ -195,6 +222,8 @@ void getMessage(int bytes, int pin) {
       receiveBuffer[i / 8] |= (1 << (i % 8));
     }
   }
+
+  return true;
 }
 
 bool calculateRoasterChecksum() {
@@ -220,19 +249,23 @@ void printBuffer(int bytes) {
   Serial.print("\n");
 }
 
-void getRoasterMessage() {
+bool getRoasterMessage() {
 #ifdef __DEBUG__
   Serial.print("R ");
 #endif
 
-  bool passedChecksum = false;
-  int count = 0;
+  static int count = 0;
 
-  while (!passedChecksum) {
-    count += 1;
-    getMessage(ROASTER_MESSAGE_LENGTH, CONTROLLER_PIN_RX);
-    passedChecksum = calculateRoasterChecksum();
+  if ( !( getMessage(ROASTER_MESSAGE_LENGTH, CONTROLLER_PIN_RX)
+          and calculateRoasterChecksum())) {
+    // timeout receiving message or receiving it correctly
+    if ( count < MESSAGE_RX_MAX_ATTEMPTS) count++;  // don't overflow
+    return (count < MESSAGE_RX_MAX_ATTEMPTS) && roaster_sync;
   }
+
+  // received message and passed checksum verification
+  count = 0;
+
 #ifdef __DEBUG__
   printBuffer(ROASTER_MESSAGE_LENGTH);
 #endif
@@ -246,7 +279,9 @@ void getRoasterMessage() {
 #endif
 
   temp = calculateTemp();
+  return true;
 }
+
 void handleHEAT(uint8_t value) {
   if (value >= 0 && value <= 100) {
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_HEAT], value);
@@ -342,7 +377,7 @@ void loop() {
 
   sendMessage();
 
-  getRoasterMessage();
+  roaster_sync = getRoasterMessage();
 
   if (Serial.available() > 0) {
     String input = Serial.readString();
