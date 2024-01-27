@@ -76,6 +76,7 @@ void updateLCD(void) {
     return;
   }
   
+  display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.print(F("RSTR Temp: "));
   display.print(temp);
