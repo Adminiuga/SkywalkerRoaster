@@ -52,6 +52,7 @@ void welcomeLCD(void) {
 
 void updateLCD(void) {
   static unsigned long lcd_last_tick = micros();
+  static bool invert_text = false;
   unsigned long tick = micros();
 
   if ((tick - lcd_last_tick) < (unsigned long)(UPDATE_LCD_PERIOD_MS * 1000)) {
@@ -62,12 +63,17 @@ void updateLCD(void) {
   lcd_last_tick = tick;
   display.clearDisplay();
   display.setCursor(0,0);
-  if (roaster_sync) {
-    display.setTextColor(SSD1306_WHITE);
-    display.println(F("Sync"));
-  } else {
-    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+  if (!roaster_sync) {
+    if (invert_text) {
+      display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    } else {
+      display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+    }
+    invert_text = !invert_text;
+    display.setTextSize(2);
     display.println(F("Sync Loss"));
+    display.display();
+    return;
   }
   
   display.setTextColor(SSD1306_WHITE);
