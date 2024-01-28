@@ -19,7 +19,24 @@
 
 // declare sync loss if fail to receive message n times
 #define MESSAGE_RX_MAX_ATTEMPTS             5
+// number of attempts to receive a preamble
+#define MESSAGE_PREAMBLE_MAX_ATTEMPTS       60
 
 typedef unsigned long ustick_t;
+
+#ifdef __DEBUG__
+#define DEBUG(...) Serial.print(__VA_ARGS__)
+#define DEBUGLN(...) Serial.println(__VA_ARGS__)
+#else
+#define DEBUG(...)
+#define DEBUGLN(...)
+#endif
+#ifdef __WARN__
+#define WARN(...) Serial.print(__VA_ARGS__)
+#define WARNLN(...) Serial.println(__VA_ARGS__)
+#else
+#define WARN(...)
+#define WARNLN(...)
+#endif
 
 #endif  // __ROASTER_H

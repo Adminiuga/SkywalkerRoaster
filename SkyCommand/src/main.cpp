@@ -1,6 +1,3 @@
-//#define __DEBUG__
-//#define __WARN__
-
 #include <Arduino.h>
 
 #ifdef USE_LCD
@@ -10,12 +7,20 @@
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 #endif
 
+#ifdef USE_THERMOCOUPLE
+#include "thermocouple.h"
+#endif
+
 #include "roaster.h"
 
 uint8_t receiveBuffer[ROASTER_MESSAGE_LENGTH];
 uint8_t sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH];
 
 double temp = 0.0;
+#ifdef USE_THERMOCOUPLE
+double tcTempC = 0.0;
+uint8_t tcStatus = 1;
+#endif
 
 static ustick_t tc4LastTick = 0;
 char CorF = 'F';
@@ -28,13 +33,9 @@ void welcomeLCD(void);
 void updateLCD(void);
 
 void setupLCD(void) {
-  Serial.print("OLED address: ");
-  Serial.println(SCREEN_ADDRESS);
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
       Serial.println(F("SSD1306 allocation failed"));
       for(;;);
-  } else {
-    Serial.println("Adafruit_SSD1306 initialized successfuly");
   }
 }
 
@@ -45,8 +46,8 @@ void welcomeLCD(void) {
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0,0);
   display.println(F("Skyduino Roaster"));
-  display.print(F("Version: 0x"));
-  display.print(0xff, HEX);
+  display.print(F("Version: "));
+  display.println(F(SKYDUINO_VERSION));
   display.display();
 }
 
@@ -76,12 +77,16 @@ void updateLCD(void) {
     return;
   }
   
+  display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.print(F("RSTR Temp: "));
+  display.print(F("Temp: "));
   display.print(temp);
+  display.print(F(" / "));
   if (CorF == 'F') {
+    display.print(convertCelcius2Fahrenheit(tcTempC));
     display.println(F("F"));
   } else {
+    display.print(tcTempC);
     display.println(F("C"));
   }
 
@@ -169,11 +174,9 @@ double calculateTemp() {
   double x = ((receiveBuffer[0] << 8) + receiveBuffer[1]) / 1000.0;
   double y = ((receiveBuffer[2] << 8) + receiveBuffer[3]) / 1000.0;
 
-#ifdef __DEBUG__
-  Serial.print(x);
-  Serial.print(',');
-  Serial.println(y);
-#endif
+  DEBUG(x);
+  DEBUG(',');
+  DEBUGLN(y);
 
   double v = 583.1509258523457 + -714.0345395202813 * x + -196.071718077524 * y
              + 413.37964344228334 * x * x + 2238.149675349052 * x * y
@@ -199,16 +202,31 @@ bool getMessage(int bytes, int pin) {
   }
   receiveBuffer[ROASTER_MESSAGE_BYTE_CRC] = 0x55;
 
-  pulseDuration = pulseIn(pin, LOW);
-  if ( (pulseDuration == 0)
-       || (pulseDuration < ROASTER_PREAMBLE_LENGTH_US)) {
-    // did not detect preamble
+  uint8_t attempts = 0;
+  bool preambleDetected = false;
+  do {
+    pulseDuration = pulseIn(pin, LOW);
+    if ( pulseDuration >= ROASTER_PREAMBLE_LENGTH_US) {
+      preambleDetected = true;
+      break;
+    }
+    attempts++;
+  } while (attempts <= MESSAGE_PREAMBLE_MAX_ATTEMPTS);
+
+  if (!preambleDetected) {
+    WARN(F("Did not detect preamble after "));
+    WARN(attempts);
+    WARNLN(F(" attempts"));
     return false;
   }
 
   for (int i = 0; i < bits; i++) {  //Read the proper number of bits..
     pulseDuration = pulseIn(pin, LOW);
-    if (pulseDuration == 0) return false;
+    if (pulseDuration == 0) {
+      WARN(F("Failed to get bit #"));
+      WARNLN(i);
+      return false;
+    }
     timeIntervals[i] = pulseDuration;
   }
 
@@ -232,12 +250,10 @@ bool calculateRoasterChecksum() {
     sum += receiveBuffer[i];
   }
 
-#ifdef __DEBUG__
-  Serial.print("sum: ");
-  Serial.print(sum, HEX);
-  Serial.print(" Checksum Byte: ");
-  Serial.println(receiveBuffer[ROASTER_MESSAGE_LENGTH - 1], HEX);
-#endif
+  DEBUG(F("sum: "));
+  DEBUG(sum, HEX);
+  DEBUG(F(" Checksum Byte: "));
+  DEBUGLN(receiveBuffer[ROASTER_MESSAGE_LENGTH - 1], HEX);
   return sum == receiveBuffer[ROASTER_MESSAGE_LENGTH - 1];
 }
 
@@ -250,33 +266,27 @@ void printBuffer(int bytes) {
 }
 
 bool getRoasterMessage() {
-#ifdef __DEBUG__
-  Serial.print("R ");
-#endif
+  DEBUG(F("R "));
 
-  static int count = 0;
+  static unsigned int count = 0;
 
   if ( !( getMessage(ROASTER_MESSAGE_LENGTH, CONTROLLER_PIN_RX)
           and calculateRoasterChecksum())) {
     // timeout receiving message or receiving it correctly
-    if ( count < MESSAGE_RX_MAX_ATTEMPTS) count++;  // don't overflow
+    count++;
+    WARN(F("Failed to get message, attempt #"));
+    WARNLN(count);
     return (count < MESSAGE_RX_MAX_ATTEMPTS) && roaster_sync;
   }
 
   // received message and passed checksum verification
-  count = 0;
 
-#ifdef __DEBUG__
-  printBuffer(ROASTER_MESSAGE_LENGTH);
-#endif
-
-#ifdef __WARN__
-  if (count > 1) {
-    Serial.print("[!] WARN: Took ");
-    Serial.print(count);
-    Serial.println(" tries to read roaster.");
+  if (count > 0) {
+    WARN(F("[!] WARN: Took "));
+    WARN(count);
+    WARNLN(F(" tries to read roaster."));
   }
-#endif
+  count = 0;
 
   temp = calculateTemp();
   return true;
@@ -324,7 +334,11 @@ void handleREAD() {
   Serial.print(',');
   Serial.print(temp);
   Serial.print(',');
-  Serial.print(temp);
+  if (CorF == 'F') {
+    Serial.print(convertCelcius2Fahrenheit(tcTempC));
+  } else {
+    Serial.print(tcTempC);
+  }
   Serial.print(',');
   Serial.print(sendBuffer[ROASTER_MESSAGE_BYTE_HEAT]);
   Serial.print(',');
@@ -358,6 +372,10 @@ void setup() {
   shutdown();
 
   welcomeLCD();
+
+#ifdef USE_THERMOCOUPLE
+  setupThermoCouple();
+#endif
 }
 
 void loop() {
@@ -378,6 +396,10 @@ void loop() {
   sendMessage();
 
   roaster_sync = getRoasterMessage();
+
+#ifdef USE_THERMOCOUPLE
+  tcStatus = processThermoCouple();
+#endif
 
   if (Serial.available() > 0) {
     String input = Serial.readString();
