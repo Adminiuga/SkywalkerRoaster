@@ -20,7 +20,10 @@ uint8_t receiveBuffer[ROASTER_MESSAGE_LENGTH];
 uint8_t sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH];
 
 double temp = 0.0;
+#ifdef USE_THERMOCOUPLE
 double tc_temp_c = 0.0;
+uint8_t tcStatus = 1
+#endif
 
 static ustick_t tc4LastTick = 0;
 char CorF = 'F';
@@ -388,6 +391,10 @@ void loop() {
   sendMessage();
 
   roaster_sync = getRoasterMessage();
+
+#ifdef USE_THERMOCOUPLE
+  tcStatus = processThermoCouple();
+#endif
 
   if (Serial.available() > 0) {
     String input = Serial.readString();
