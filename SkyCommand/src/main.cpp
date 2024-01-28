@@ -205,7 +205,7 @@ bool getMessage(int bytes, int pin) {
   uint8_t attempts = 0;
   bool preambleDetected = false;
   do {
-    pulseDuration = pulseIn(pin, LOW);
+    pulseDuration = pulseIn(pin, LOW, ROASTER_PREAMBLE_LENGTH_US << 1);
     if ( pulseDuration >= ROASTER_PREAMBLE_LENGTH_US) {
       preambleDetected = true;
       break;
@@ -332,13 +332,13 @@ void handleDRUM(uint8_t value) {
 void handleREAD() {
   Serial.print(0.0);
   Serial.print(',');
-  Serial.print(temp);
-  Serial.print(',');
   if (CorF == 'F') {
     Serial.print(convertCelcius2Fahrenheit(tcTempC));
   } else {
     Serial.print(tcTempC);
   }
+  Serial.print(',');
+  Serial.print(temp);
   Serial.print(',');
   Serial.print(sendBuffer[ROASTER_MESSAGE_BYTE_HEAT]);
   Serial.print(',');
