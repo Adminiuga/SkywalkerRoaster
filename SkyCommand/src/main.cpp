@@ -332,11 +332,15 @@ void handleDRUM(uint8_t value) {
 void handleREAD() {
   Serial.print(0.0);
   Serial.print(',');
+#ifdef USE_THERMOCOUPLE
   if (CorF == 'F') {
     Serial.print(convertCelcius2Fahrenheit(tcTempC));
   } else {
     Serial.print(tcTempC);
   }
+#else
+  Serial.print(temp);
+#endif // USE_THERMOCOUPLE
   Serial.print(',');
   Serial.print(temp);
   Serial.print(',');
