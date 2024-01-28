@@ -4,7 +4,7 @@
 
 #include "roaster.h"
 
-extern double tc_temp_c;
+extern double tcTempC;
 
 static MAX6675 thermoCouple(MAX_CS_PIN, &SPI);
 
@@ -20,7 +20,7 @@ uint8_t processThermoCouple(void) {
     lastTick = tick;
     int status = thermoCouple.read();
     if (status == 0) {
-        tc_temp_c = thermoCouple.getTemperature();
+        tcTempC = thermoCouple.getTemperature();
     }
 
     return status;

@@ -21,8 +21,8 @@ uint8_t sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH];
 
 double temp = 0.0;
 #ifdef USE_THERMOCOUPLE
-double tc_temp_c = 0.0;
-uint8_t tcStatus = 1
+double tcTempC = 0.0;
+uint8_t tcStatus = 1;
 #endif
 
 static ustick_t tc4LastTick = 0;
@@ -86,11 +86,14 @@ void updateLCD(void) {
   
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.print(F("RSTR Temp: "));
+  display.print(F("Temp: "));
   display.print(temp);
+  display.print(F(" / "));
   if (CorF == 'F') {
+    display.print(convertCelcius2Fahrenheit(tcTempC));
     display.println(F("F"));
   } else {
+    display.print(tcTempC);
     display.println(F("C"));
   }
 
