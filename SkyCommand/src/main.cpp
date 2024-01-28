@@ -336,7 +336,11 @@ void handleREAD() {
   Serial.print(',');
   Serial.print(temp);
   Serial.print(',');
-  Serial.print(temp);
+  if (CorF == 'F') {
+    Serial.print(convertCelcius2Fahrenheit(tcTempC));
+  } else {
+    Serial.print(tcTempC);
+  }
   Serial.print(',');
   Serial.print(sendBuffer[ROASTER_MESSAGE_BYTE_HEAT]);
   Serial.print(',');
