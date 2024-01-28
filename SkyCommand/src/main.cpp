@@ -46,8 +46,8 @@ void welcomeLCD(void) {
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0,0);
   display.println(F("Skyduino Roaster"));
-  display.print(F("Version: 0x"));
-  display.print(0xff, HEX);
+  display.print(F("Version: "));
+  display.println(F(SKYDUINO_VERSION));
   display.display();
 }
 
