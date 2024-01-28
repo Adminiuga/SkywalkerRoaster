@@ -19,6 +19,8 @@
 
 // declare sync loss if fail to receive message n times
 #define MESSAGE_RX_MAX_ATTEMPTS             5
+// number of attempts to receive a preamble
+#define MESSAGE_PREAMBLE_MAX_ATTEMPTS       60
 
 typedef unsigned long ustick_t;
 

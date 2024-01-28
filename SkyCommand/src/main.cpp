@@ -206,11 +206,21 @@ bool getMessage(int bytes, int pin) {
   }
   receiveBuffer[ROASTER_MESSAGE_BYTE_CRC] = 0x55;
 
-  pulseDuration = pulseIn(pin, LOW);
-  if ( (pulseDuration == 0)
-       || (pulseDuration < ROASTER_PREAMBLE_LENGTH_US)) {
-    // did not detect preamble
-    WARNLN(F("Did not get preamble"));
+  uint8_t attempts = 0;
+  bool preambleDetected = false;
+  do {
+    pulseDuration = pulseIn(pin, LOW);
+    if ( pulseDuration >= ROASTER_PREAMBLE_LENGTH_US) {
+      preambleDetected = true;
+      break;
+    }
+    attempts++;
+  } while (attempts <= MESSAGE_PREAMBLE_MAX_ATTEMPTS);
+
+  if (!preambleDetected) {
+    WARN(F("Did not detect preamble after "));
+    WARN(attempts);
+    WARNLN(F(" attempts"));
     return false;
   }
 
