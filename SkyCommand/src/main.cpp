@@ -192,7 +192,6 @@ double calculateTemp() {
 }
 
 bool getMessage(int bytes, int pin) {
-  unsigned long timeIntervals[ROASTER_MESSAGE_LENGTH * 8];
   unsigned long pulseDuration = 0;
   int bits = bytes * 8;
 
@@ -200,7 +199,6 @@ bool getMessage(int bytes, int pin) {
   for (uint8_t i=0; i < ROASTER_MESSAGE_LENGTH; i++) {
     receiveBuffer[i] = 0;
   }
-  receiveBuffer[ROASTER_MESSAGE_BYTE_CRC] = 0x55;
 
   uint8_t attempts = 0;
   bool preambleDetected = false;
@@ -227,16 +225,8 @@ bool getMessage(int bytes, int pin) {
       WARNLN(i);
       return false;
     }
-    timeIntervals[i] = pulseDuration;
-  }
-
-  for (int i = 0; i < 7; i++) {  //zero that buffer
-    receiveBuffer[i] = 0;
-  }
-
-  for (int i = 0; i < bits; i++) {  //Convert timings to bits
     //Bits are received in LSB order..
-    if (timeIntervals[i] > ROASTER_ONE_LENGTH_US) {  // we received a 1
+    if (pulseDuration > ROASTER_ONE_LENGTH_US) {  // we received a 1
       receiveBuffer[i / 8] |= (1 << (i % 8));
     }
   }
