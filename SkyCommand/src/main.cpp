@@ -33,13 +33,9 @@ void welcomeLCD(void);
 void updateLCD(void);
 
 void setupLCD(void) {
-  Serial.print("OLED address: ");
-  Serial.println(SCREEN_ADDRESS);
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
       Serial.println(F("SSD1306 allocation failed"));
       for(;;);
-  } else {
-    Serial.println("Adafruit_SSD1306 initialized successfuly");
   }
 }
 
@@ -277,7 +273,7 @@ bool getRoasterMessage() {
   if ( !( getMessage(ROASTER_MESSAGE_LENGTH, CONTROLLER_PIN_RX)
           and calculateRoasterChecksum())) {
     // timeout receiving message or receiving it correctly
-    if ( count <= MESSAGE_RX_MAX_ATTEMPTS >> 3) count++;  // don't overflow
+    count++;
     WARN(F("Failed to get message, attempt #"));
     WARNLN(count);
     return (count < MESSAGE_RX_MAX_ATTEMPTS) && roaster_sync;
