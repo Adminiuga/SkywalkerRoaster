@@ -340,6 +340,11 @@ void handleREAD() {
         Serial.print(F(","));
     }
   }
+  Serial.print(',');
+  Serial.print(sendBuffer[ROASTER_MESSAGE_BYTE_HEAT]);
+  Serial.print(',');
+  Serial.print(sendBuffer[ROASTER_MESSAGE_BYTE_VENT]);
+  Serial.print(',');
   Serial.println(F("0"));
 
   tc4LastTick = micros();
