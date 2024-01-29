@@ -22,6 +22,16 @@
 // number of attempts to receive a preamble
 #define MESSAGE_PREAMBLE_MAX_ATTEMPTS       60
 
+// max number of temp channels
+#define TEMPERATURE_CHANNELS_MAX            4
+// physical channel for temperature reported by roaster
+#define TEMPERATURE_CHANNEL_ROASTER         0
+// physical channel for thermocouple temperature
+#define TEMPERATURE_CHANNEL_THERMOCOUPLE    1
+
+#define TEMPERATURE_ROASTER chanTempPhysical[TEMPERATURE_CHANNEL_ROASTER]
+#define TEMPERATURE_TC      chanTempPhysical[TEMPERATURE_CHANNEL_THERMOCOUPLE]
+
 typedef unsigned long ustick_t;
 
 #ifdef __DEBUG__
