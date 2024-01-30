@@ -19,9 +19,9 @@ uint8_t sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH];
 double chanTempPhysical[TEMPERATURE_CHANNELS_MAX] = {0, 0, 0, 0};
 uint8_t chanMapping[TEMPERATURE_CHANNELS_MAX] =
 #ifdef USE_THERMOCOUPLE
-  {1, 2, 0, 0};
+  {TEMPERATURE_CHANNEL_ROASTER+1, TEMPERATURE_CHANNEL_THERMOCOUPLE+1, 0, 0};
 #else
-  {0, 2, 0, 0};
+  {0, TEMPERATURE_CHANNEL_ROASTER+1, 0, 0};
 #endif // USE_THERMOCOUPLE
 
 #ifdef USE_THERMOCOUPLE
@@ -336,16 +336,16 @@ void handleDRUM(uint8_t value) {
 
 void handleREAD() {
   Serial.print(F("0.0"));
-  Serial.print(F(","));
   uint8_t mapping = 0;
   for (uint8_t i = 0; i < TEMPERATURE_CHANNELS_MAX; i++) {
     mapping = chanMapping[i];
     if ((mapping >= 1)
         && (mapping <= TEMPERATURE_CHANNELS_MAX)) {
-        Serial.print(chanTempPhysical[mapping - 1]);
         Serial.print(F(","));
+        Serial.print(chanTempPhysical[mapping - 1]);
     }
   }
+  Serial.print(F(","));
   Serial.print(sendBuffer[ROASTER_MESSAGE_BYTE_HEAT]);
   Serial.print(',');
   Serial.print(sendBuffer[ROASTER_MESSAGE_BYTE_VENT]);
