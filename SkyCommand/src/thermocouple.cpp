@@ -3,8 +3,10 @@
 #define MAX_CS_PIN 10
 
 #include "roaster.h"
+#include "thermocouple.h"
 
-extern double tcTempC;
+extern char CorF;
+extern double chanTempPhysical[TEMPERATURE_CHANNELS_MAX];
 
 static MAX6675 thermoCouple(MAX_CS_PIN, &SPI);
 
@@ -20,7 +22,11 @@ uint8_t processThermoCouple(void) {
     lastTick = tick;
     int status = thermoCouple.read();
     if (status == 0) {
-        tcTempC = thermoCouple.getTemperature();
+        if (CorF == 'C') {
+            TEMPERATURE_TC = thermoCouple.getTemperature();
+        } else {
+            TEMPERATURE_TC = convertCelcius2Fahrenheit(thermoCouple.getTemperature());
+        }
     }
 
     return status;

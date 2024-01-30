@@ -16,9 +16,15 @@
 uint8_t receiveBuffer[ROASTER_MESSAGE_LENGTH];
 uint8_t sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH];
 
-double temp = 0.0;
+double chanTempPhysical[TEMPERATURE_CHANNELS_MAX] = {0, 0, 0, 0};
+uint8_t chanMapping[TEMPERATURE_CHANNELS_MAX] =
 #ifdef USE_THERMOCOUPLE
-double tcTempC = 0.0;
+  {TEMPERATURE_CHANNEL_ROASTER+1, TEMPERATURE_CHANNEL_THERMOCOUPLE+1, 0, 0};
+#else
+  {0, TEMPERATURE_CHANNEL_ROASTER+1, 0, 0};
+#endif // USE_THERMOCOUPLE
+
+#ifdef USE_THERMOCOUPLE
 uint8_t tcStatus = 1;
 #endif
 
@@ -80,15 +86,24 @@ void updateLCD(void) {
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.print(F("Temp: "));
-  display.print(temp);
-  display.print(F(" / "));
+  uint8_t mapping = 0;
+  for (uint8_t i = 0; i < 2; i++) {
+    mapping = chanMapping[i];
+    if (mapping
+        && (mapping >= 1)
+        && (mapping <= TEMPERATURE_CHANNELS_MAX)) {
+        display.print(chanTempPhysical[mapping - 1]);
+        display.print(F(" "));
+    } else {
+      display.print(F("0.0 "));
+    }
+  }
   if (CorF == 'F') {
-    display.print(convertCelcius2Fahrenheit(tcTempC));
     display.println(F("F"));
   } else {
-    display.print(tcTempC);
     display.println(F("C"));
   }
+  
 
   // New line
   display.print(F("Heat: "));
@@ -278,7 +293,7 @@ bool getRoasterMessage() {
   }
   count = 0;
 
-  temp = calculateTemp();
+  TEMPERATURE_ROASTER = calculateTemp();
   return true;
 }
 
@@ -320,25 +335,22 @@ void handleDRUM(uint8_t value) {
 }
 
 void handleREAD() {
-  Serial.print(0.0);
-  Serial.print(',');
-#ifdef USE_THERMOCOUPLE
-  if (CorF == 'F') {
-    Serial.print(convertCelcius2Fahrenheit(tcTempC));
-  } else {
-    Serial.print(tcTempC);
+  Serial.print(F("0.0"));
+  uint8_t mapping = 0;
+  for (uint8_t i = 0; i < TEMPERATURE_CHANNELS_MAX; i++) {
+    mapping = chanMapping[i];
+    if ((mapping >= 1)
+        && (mapping <= TEMPERATURE_CHANNELS_MAX)) {
+        Serial.print(F(","));
+        Serial.print(chanTempPhysical[mapping - 1]);
+    }
   }
-#else
-  Serial.print(temp);
-#endif // USE_THERMOCOUPLE
-  Serial.print(',');
-  Serial.print(temp);
-  Serial.print(',');
+  Serial.print(F(","));
   Serial.print(sendBuffer[ROASTER_MESSAGE_BYTE_HEAT]);
   Serial.print(',');
   Serial.print(sendBuffer[ROASTER_MESSAGE_BYTE_VENT]);
   Serial.print(',');
-  Serial.println('0');
+  Serial.println(F("0"));
 
   tc4LastTick = micros();
 }
@@ -353,8 +365,33 @@ bool itsbeentoolong() {
   return duration > (TC4_COMM_TIMEOUT_MS * 1000);
 }
 
-void handleCHAN() {
-  Serial.println("# Active channels set to 0200");
+void handleCHAN(String channels) {
+  if (channels.length() != TEMPERATURE_CHANNELS_MAX) {
+    WARN(F("Ignoring channels command, as "));
+    WARN(channels);
+    WARN(F(" does not match the number of supported channels"));
+    return;
+  }
+
+  WARN(F("Handling CHAN command with "));
+  WARN(channels);
+  WARNLN(F(" value"));
+  Serial.print(F("# Active channels set to "));
+  char strbuf[2];
+  int chanNum;
+  for (uint8_t i = 0; i < TEMPERATURE_CHANNELS_MAX; i++) {
+    strbuf[0] = channels.charAt(i);
+    strbuf[1] = '\0';
+    chanNum = atoi(strbuf);
+    if ( (chanNum >= 0)
+         && (chanNum <= TEMPERATURE_CHANNELS_MAX)) {
+          chanMapping[i] = chanNum;
+          Serial.print(chanNum);
+    } else {
+          Serial.print(F("0"));
+    }
+  }
+  Serial.println();
 }
 
 void setup() {
@@ -424,8 +461,8 @@ void loop() {
       handleFILTER(value);
     } else if (command == "COOL") { //Cool the beans
       handleCOOL(value);
-    } else if (command == "CHAN") { //Hanlde the TC4 init message
-      handleCHAN();
+    } else if (command == "CHAN" && (split > 0)) { //Hanlde the TC4 init message
+      handleCHAN(input.substring(split+1));
     } else if (command == "UNITS") {
       if (split >= 0) CorF = input.charAt(split + 1);
     }
