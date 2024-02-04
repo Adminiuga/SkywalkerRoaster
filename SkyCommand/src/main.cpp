@@ -163,6 +163,13 @@ void pulsePin(int pin, int duration) {
 
 void sendMessage() {
   //send Preamble
+  static unsigned long lastTick = micros();
+
+  if ((micros() - lastTick) < ROASTER_SEND_MESSAGE_INTERVAL_US) {
+    return;
+  }
+  lastTick = micros();
+
   pulsePin(CONTROLLER_PIN_TX, 7500);
   delayMicroseconds(3800);
 
@@ -218,7 +225,7 @@ bool getMessage(int bytes, int pin) {
   uint8_t attempts = 0;
   bool preambleDetected = false;
   do {
-    pulseDuration = pulseIn(pin, LOW, ROASTER_PREAMBLE_LENGTH_US << 1);
+    pulseDuration = pulseIn(pin, LOW, ROASTER_PREAMBLE_LENGTH_US << 2);
     if ( pulseDuration >= ROASTER_PREAMBLE_LENGTH_US) {
       preambleDetected = true;
       break;
