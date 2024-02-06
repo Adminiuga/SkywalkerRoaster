@@ -32,6 +32,8 @@ static ustick_t tc4LastTick = 0;
 char CorF = 'F';
 static bool roaster_sync = false;
 
+void JumpToBootloader(void);
+
 #ifdef USE_LCD
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 void setupLCD(void);
@@ -472,6 +474,8 @@ void loop() {
       handleCHAN(input.substring(split+1));
     } else if (command == "UNITS") {
       if (split >= 0) CorF = input.charAt(split + 1);
+    } else if (command == "DFU") {
+      JumpToBootloader();
     }
   }
 
