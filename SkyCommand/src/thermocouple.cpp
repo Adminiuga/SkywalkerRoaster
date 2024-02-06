@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <MAX6675.h>
-#define MAX_CS_PIN 10
+#ifndef MAX_CS_PIN
+#define MAX_CS_PIN PIN_SPI_SS
+#endif  // MAX_CS_PIN
 
 #include "roaster.h"
 #include "thermocouple.h"
