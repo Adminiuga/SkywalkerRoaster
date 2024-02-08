@@ -7,6 +7,13 @@
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 #endif
 
+#ifdef ARDUINO_BLACKPILL_F411CE
+#include <f4/bootloader.h>
+#ifndef CMD_DFU_TIMEOUT_US
+#define CMD_DFU_TIMEOUT_US 10000000UL
+#endif // CMD_DFU_TIMEOUT_US
+#endif // ARDUINO_BLACKPILL_F411CE
+
 #ifdef USE_THERMOCOUPLE
 #include "thermocouple.h"
 #endif
@@ -31,6 +38,8 @@ uint8_t tcStatus = 1;
 static ustick_t tc4LastTick = 0;
 char CorF = 'F';
 static bool roaster_sync = false;
+
+void JumpToBootloader(void);
 
 #ifdef USE_LCD
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -163,6 +172,13 @@ void pulsePin(int pin, int duration) {
 
 void sendMessage() {
   //send Preamble
+  static unsigned long lastTick = micros();
+
+  if ((micros() - lastTick) < ROASTER_SEND_MESSAGE_INTERVAL_US) {
+    return;
+  }
+  lastTick = micros();
+
   pulsePin(CONTROLLER_PIN_TX, 7500);
   delayMicroseconds(3800);
 
@@ -218,7 +234,7 @@ bool getMessage(int bytes, int pin) {
   uint8_t attempts = 0;
   bool preambleDetected = false;
   do {
-    pulseDuration = pulseIn(pin, LOW, ROASTER_PREAMBLE_LENGTH_US << 1);
+    pulseDuration = pulseIn(pin, LOW, ROASTER_PREAMBLE_LENGTH_US << 2);
     if ( pulseDuration >= ROASTER_PREAMBLE_LENGTH_US) {
       preambleDetected = true;
       break;
@@ -394,9 +410,34 @@ void handleCHAN(String channels) {
   Serial.println();
 }
 
+#ifdef ARDUINO_BLACKPILL_F411CE
+void handleDFUCommand(int response) {
+  static ustick_t lastTick = 0;
+  static int challenge = 0;
+  ustick_t now = micros();
+
+  if ( response == 0 || challenge == 0) {
+    // challenge bootloader trigger command
+    challenge = now & 0x0FFF;
+    Serial.print(F("DFU challenge: "));
+    Serial.println(challenge);
+    lastTick = now;
+  } else {
+    if ((now - lastTick) <= CMD_DFU_TIMEOUT_US && response == challenge) {
+      // got challenge respone before the timeout
+      JumpToBootloader();
+    } else {
+      challenge = 0;
+      lastTick = 0;
+    }
+  }
+
+}
+#endif // ARDUINO_BLACKPILL_F411CE
+
 void setup() {
   Serial.begin(115200);
-  Serial.setTimeout(100);
+  Serial.setTimeout(1000);
   setupLCD();
 
   pinMode(CONTROLLER_PIN_TX, OUTPUT);
@@ -465,6 +506,14 @@ void loop() {
       handleCHAN(input.substring(split+1));
     } else if (command == "UNITS") {
       if (split >= 0) CorF = input.charAt(split + 1);
+#ifdef ARDUINO_BLACKPILL_F411CE
+    } else if (command == "DFU") {
+      if (split < 0) {
+        handleDFUCommand(0);
+      } else {
+        handleDFUCommand(input.substring(split+1).toInt());
+      }
+#endif // ARDUINO_BLACKPILL_F411CE
     }
   }
 

@@ -17,6 +17,9 @@
 // TC4 protocol communication timeout in milliseconds
 #define TC4_COMM_TIMEOUT_MS                 10000UL
 
+// interval of sending message to the roaster
+#define ROASTER_SEND_MESSAGE_INTERVAL_US    200000UL
+
 // declare sync loss if fail to receive message n times
 #define MESSAGE_RX_MAX_ATTEMPTS             5
 // number of attempts to receive a preamble
