@@ -7,6 +7,13 @@
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 #endif
 
+#ifdef ARDUINO_BLACKPILL_F411CE
+#include <f4/bootloader.h>
+#ifndef CMD_DFU_TIMEOUT_US
+#define CMD_DFU_TIMEOUT_US 10000000UL
+#endif // CMD_DFU_TIMEOUT_US
+#endif // ARDUINO_BLACKPILL_F411CE
+
 #ifdef USE_THERMOCOUPLE
 #include "thermocouple.h"
 #endif
@@ -403,9 +410,34 @@ void handleCHAN(String channels) {
   Serial.println();
 }
 
+#ifdef ARDUINO_BLACKPILL_F411CE
+void handleDFUCommand(int response) {
+  static ustick_t lastTick = 0;
+  static int challenge = 0;
+  ustick_t now = micros();
+
+  if ( response == 0 || challenge == 0) {
+    // challenge bootloader trigger command
+    challenge = now & 0x0FFF;
+    Serial.print(F("DFU challenge: "));
+    Serial.println(challenge);
+    lastTick = now;
+  } else {
+    if ((now - lastTick) <= CMD_DFU_TIMEOUT_US && response == challenge) {
+      // got challenge respone before the timeout
+      JumpToBootloader();
+    } else {
+      challenge = 0;
+      lastTick = 0;
+    }
+  }
+
+}
+#endif // ARDUINO_BLACKPILL_F411CE
+
 void setup() {
   Serial.begin(115200);
-  Serial.setTimeout(100);
+  Serial.setTimeout(1000);
   setupLCD();
 
   pinMode(CONTROLLER_PIN_TX, OUTPUT);
@@ -474,8 +506,14 @@ void loop() {
       handleCHAN(input.substring(split+1));
     } else if (command == "UNITS") {
       if (split >= 0) CorF = input.charAt(split + 1);
+#ifdef ARDUINO_BLACKPILL_F411CE
     } else if (command == "DFU") {
-      JumpToBootloader();
+      if (split < 0) {
+        handleDFUCommand(0);
+      } else {
+        handleDFUCommand(input.substring(split+1).toInt());
+      }
+#endif // ARDUINO_BLACKPILL_F411CE
     }
   }
 

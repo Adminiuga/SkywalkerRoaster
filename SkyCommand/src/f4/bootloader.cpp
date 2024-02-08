@@ -1,5 +1,13 @@
 #include <Arduino.h>
 #include <usbd_if.h>
+#include <f4/bootloader.h>
+
+
+typedef struct {
+    uint32_t Initial_SP;
+    void (*ResetHandler)(void);
+} t_bootVecTable;
+
 
 /**
  * Function to perform jump to system memory boot from user application
@@ -7,23 +15,17 @@
  * Call function when you want to jump to system memory
  */
 void JumpToBootloader(void) {
-	void (*SysMemBootJump)(void);
- 
-	/**
-	 * Step: Set system memory address. 
-	 *       
-	 *       For other families, check AN2606 document table 110 with descriptions of memory addresses 
-	 */
-	volatile uint32_t addr = 0x1FFF0000; //0x1FFF0000;
-			
+    t_bootVecTable *_bootVec = (t_bootVecTable*) BOOTLOADER_ADDR;
+
 	/**
 	 * Step: Disable RCC, set it to default (after reset) settings
 	 *       Internal clock, no PLL, etc.
 	 */
+#ifdef USBCON
     USBD_reenumerate();
-//#if defined(USE_HAL_DRIVER)
+#endif
+
 	HAL_RCC_DeInit();
-//#endif /* defined(USE_HAL_DRIVER) */
 #if defined(USE_STDPERIPH_DRIVER)
 	RCC_DeInit();
 #endif /* defined(USE_STDPERIPH_DRIVER) */
@@ -65,12 +67,6 @@ void JumpToBootloader(void) {
 	/* Re-enable all interrupts */
 	__enable_irq();
 
-	/**
-	 * Step: Set jump memory location for system memory
-	 *       Use address with 4 bytes offset which specifies jump location where program starts
-	 */
-	SysMemBootJump = (void (*)(void)) (*((uint32_t *)(addr + 4)));
- 
 /**
 	 * Step: Set main stack pointer.
 	 *       This step must be done last otherwise local variables in this function
@@ -78,13 +74,13 @@ void JumpToBootloader(void) {
 	 *
 	 *       Set direct address location which specifies stack pointer in SRAM location
 	 */
-	__set_MSP(*(uint32_t *)addr);
+	__set_MSP(_bootVec->Initial_SP);
 	/**
 	 * Step: Actually call our function to jump to set location
 	 *       This will start system memory execution
 	 */
 
-	SysMemBootJump();
+	_bootVec->ResetHandler();
 	
 	/**
 	 * Step: Connect USB<->UART converter to dedicated USART pins and test
