@@ -437,7 +437,7 @@ void handleDFUCommand(int response) {
 
 void setup() {
   Serial.begin(115200);
-  Serial.setTimeout(1000);
+  Serial.setTimeout(100);
   setupLCD();
 
   pinMode(CONTROLLER_PIN_TX, OUTPUT);
