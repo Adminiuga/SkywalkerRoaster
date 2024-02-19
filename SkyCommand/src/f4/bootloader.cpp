@@ -58,11 +58,10 @@ void JumpToBootloader(void) {
 	//} ...or if you use HAL drivers
 	//__HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();	//Call HAL macro to do this for you
 	/* Clear Interrupt Enable Register & Interrupt Pending Register */
-	for (uint8_t i=0; i<5; i++)
-	{
-		NVIC->ICER[i]=0xFFFFFFFF;
-		NVIC->ICPR[i]=0xFFFFFFFF;
-	}
+	for (uint16_t i = 0; i < sizeof(NVIC->ICER) / sizeof(NVIC->ICER[0]); i++) {
+      NVIC->ICER[i] = 0xFFFFFFFF;
+      NVIC->ICPR[i] = 0xFFFFFFFF;
+    }
 
 	/* Re-enable all interrupts */
 	__enable_irq();
