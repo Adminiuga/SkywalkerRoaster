@@ -477,8 +477,8 @@ void loop() {
   tcStatus = processThermoCouple();
 #endif
 
-  if (Serial.available() > 0) {
-    String input = Serial.readString();
+  while (Serial.available() > 0) {
+    String input = Serial.readStringUntil('\n');
 
     uint8_t value = 0;
     input.trim();
