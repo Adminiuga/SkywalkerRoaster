@@ -11,6 +11,8 @@
 
 #define MESSAGE_LENGTH_ROASTER      7U
 #define MESSAGE_LENGTH_CONTROLLER   6U
+#define SWPROT_PREAMBLE_LENGTH_US   7000U
+#define SWPROT_ONE_LENGTH_US        1200U
 
 
 class _SWProtocolBase {
@@ -19,7 +21,7 @@ class _SWProtocolBase {
         size_t bufferSize;
         uint8_t calculateCRC();
     public:
-        _SWProtocolBase(uint8_t *buffer, size_t bufferSize) : buffer(buffer), bufferSize(bufferSize) {};
+        _SWProtocolBase(uint8_t *buffer, size_t bufferSize);
         virtual void begin() {};
 };
 
