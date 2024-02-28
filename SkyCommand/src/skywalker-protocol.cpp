@@ -18,7 +18,7 @@ uint8_t _SWProtocolBase::calculateCRC() {
 /*
  * update checksum based on the buffer content
  */
-void _SWProtocolBase::updateCRC() {
+void _SWProtocolTx::updateCRC() {
     buffer[bufferSize] = calculateCRC();
 }
 
@@ -26,11 +26,18 @@ void _SWProtocolBase::updateCRC() {
 /*
  * verify CRC, return true of crc matches buffer content
  */
-bool _SWProtocolBase::verifyCRC() {
+bool _SWProtocolRx::verifyCRC() {
     return buffer[bufferSize] == calculateCRC();
 }
 
 
+/*
+ * Initialize Controller transmission
+ */
 void SWControllerTx::begin(void) {
   pinMode(CONTROLLER_PIN_TX, OUTPUT);
 }
+
+
+/*
+ * set buffer byte*/
