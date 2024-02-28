@@ -22,7 +22,7 @@ class _SWProtocolBase {
         _SWProtocolBase(uint8_t *buffer, size_t bufferSize) : buffer(buffer), bufferSize(bufferSize) {};
         virtual void begin() {};
         bool verifyCRC();
-        void setCRC();
+        void updateCRC();
 };
 
 
