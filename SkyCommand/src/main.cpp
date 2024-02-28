@@ -19,6 +19,7 @@
 #endif
 
 #include "roaster.h"
+#include "skywalker-protocol.h"
 
 uint8_t receiveBuffer[ROASTER_MESSAGE_LENGTH];
 uint8_t sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH];
