@@ -21,8 +21,22 @@ class _SWProtocolBase {
     public:
         _SWProtocolBase(uint8_t *buffer, size_t bufferSize) : buffer(buffer), bufferSize(bufferSize) {};
         virtual void begin() {};
-        bool verifyCRC();
+};
+
+
+class _SWProtocolTx: protected _SWProtocolBase {
+    protected:
         void updateCRC();
+    public:
+        bool setByte(uint8_t idx, uint8_t *value);
+};
+
+
+class _SWProtocolRx: protected _SWProtocolBase {
+    protected:
+        bool verifyCRC();
+    public:
+        bool getByte(uint8_t idx, uint8_t *value);
 };
 
 
@@ -42,11 +56,12 @@ class _SWController: public _SWProtocolBase {
 };
 
 
-class SWRoasterRx: public _SWRoaster {
+class SWRoasterRx: public _SWRoaster, public _SWProtocolRx {
+    public:
 };
 
 
-class SWControllerTx: public _SWController {
+class SWControllerTx: public _SWController , public _SWProtocolTx{
     public:
         void begin();
 };
