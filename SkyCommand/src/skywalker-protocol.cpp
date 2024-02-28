@@ -4,6 +4,15 @@
 
 
 /*
+ * Base Protocol constuctor: clear up the buffer
+ */
+_SWProtocolBase::_SWProtocolBase(uint8_t *buffer, size_t bufferSize) : buffer(buffer), bufferSize(bufferSize) {
+    for (unsigned int i = 0; i < bufferSize; i++) {
+        buffer[i] = 0;
+    }
+};
+
+/*
  * Calculate checksum of the buffer
  */
 uint8_t _SWProtocolBase::calculateCRC() {
