@@ -20,14 +20,18 @@ class _SWProtocolBase {
         uint8_t *buffer;
         size_t bufferSize;
         uint8_t calculateCRC();
-    public:
+        // constructor for ProtocolTx/Rx child classes
+        _SWProtocolBase() {};
         _SWProtocolBase(uint8_t *buffer, size_t bufferSize);
+    public:
         virtual void begin() {};
 };
 
 
 class _SWProtocolTx: protected _SWProtocolBase {
     protected:
+        uint32_t pin;
+        _SWProtocolTx(uint32_t txpin): pin(txpin) {};
         void updateCRC();
     public:
         bool setByte(uint8_t idx, uint8_t *value);
@@ -36,6 +40,8 @@ class _SWProtocolTx: protected _SWProtocolBase {
 
 class _SWProtocolRx: protected _SWProtocolBase {
     protected:
+        uint32_t pin;
+        _SWProtocolRx(uint32_t rxpin): pin(rxpin) {};
         bool verifyCRC();
     public:
         bool getByte(uint8_t idx, uint8_t *value);
@@ -53,18 +59,18 @@ class _SWController: public _SWProtocolBase {
     protected:
         _SWController(): _SWProtocolBase(bufMemory, MESSAGE_LENGTH_CONTROLLER) {};
         uint8_t bufMemory[MESSAGE_LENGTH_CONTROLLER];
-    public:
-        virtual void begin();
 };
 
 
 class SWRoasterRx: public _SWRoaster, public _SWProtocolRx {
     public:
+        SWRoasterRx(): _SWProtocolRx(CONTROLLER_PIN_RX) {};
 };
 
 
 class SWControllerTx: public _SWController , public _SWProtocolTx{
     public:
+        SWControllerTx(): _SWProtocolTx(CONTROLLER_PIN_TX) {};
         void begin();
 };
 
