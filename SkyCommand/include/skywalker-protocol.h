@@ -23,6 +23,7 @@ class _SWProtocolBase {
         // constructor for ProtocolTx/Rx child classes
         _SWProtocolBase() {};
         _SWProtocolBase(uint8_t *buffer, size_t bufferSize);
+        void initializeBuffer();
     public:
         virtual void begin() {};
 };
@@ -33,8 +34,12 @@ class _SWProtocolTx: protected _SWProtocolBase {
         uint32_t pin;
         _SWProtocolTx(uint32_t txpin): pin(txpin) {};
         void updateCRC();
+        void sendBit(uint8_t value);
+        void sendPreamble();
     public:
-        bool setByte(uint8_t idx, uint8_t *value);
+        bool setByte(uint8_t idx, uint8_t value);
+        void sendMessage();
+        void shutdown();
 };
 
 
