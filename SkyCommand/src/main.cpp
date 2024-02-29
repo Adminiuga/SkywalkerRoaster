@@ -21,8 +21,17 @@
 #include "roaster.h"
 #include "skywalker-protocol.h"
 
+typedef struct {
+  uint8_t heat;
+  uint8_t vent;
+  uint8_t cool;
+  uint8_t filter;
+  uint8_t drum;
+} t_stateRoaster;
+
 uint8_t receiveBuffer[ROASTER_MESSAGE_LENGTH];
 SWControllerTx roasterController;
+t_stateRoaster roasterState;
 
 double chanTempPhysical[TEMPERATURE_CHANNELS_MAX] = {0, 0, 0, 0};
 uint8_t chanMapping[TEMPERATURE_CHANNELS_MAX] =
@@ -117,20 +126,20 @@ void updateLCD(void) {
 
   // New line
   display.print(F("Heat: "));
-  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_HEAT], 16);
+  display.print(roasterState.heat, 16);
   display.print(F(" Vent: "));
-  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_VENT], 16);
+  display.print(roasterState.vent, 16);
   display.println();
 
   // New line
   display.print(F("Fltr: "));
-  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_FILTER], 16);
+  display.print(roasterState.filter, 16);
   display.print(F(" Cool: "));
-  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_COOL], 16);
+  display.print(roasterState.cool, 16);
   display.println();
 
   // New line
-  if (sendBuffer[ROATER_MESSAGE_BYTE_DRUM]) {
+  if (roasterState.drum) {
     display.println(F("Drum is On"));
   } else {
     display.println(F("Drum is Off"));
@@ -231,13 +240,6 @@ bool calculateRoasterChecksum() {
   return sum == receiveBuffer[ROASTER_MESSAGE_LENGTH - 1];
 }
 
-void printBuffer(int bytes) {
-  for (int i = 0; i < bytes; i++) {
-    Serial.print(sendBuffer[i], HEX);
-    Serial.print(',');
-  }
-  Serial.print("\n");
-}
 
 bool getRoasterMessage() {
   DEBUG(F("R "));
@@ -268,7 +270,7 @@ bool getRoasterMessage() {
 
 void handleHEAT(uint8_t value) {
   if (value >= 0 && value <= 100) {
-
+    roasterState.heat = value;
     roasterController.setByte(ROASTER_MESSAGE_BYTE_HEAT, value);
   }
   tc4LastTick = micros();
@@ -276,6 +278,7 @@ void handleHEAT(uint8_t value) {
 
 void handleVENT(uint8_t value) {
   if (value >= 0 && value <= 100) {
+    roasterState.vent = value;
     roasterController.setByte(ROASTER_MESSAGE_BYTE_VENT, value);
   }
   tc4LastTick = micros();
@@ -283,6 +286,7 @@ void handleVENT(uint8_t value) {
 
 void handleCOOL(uint8_t value) {
   if (value >= 0 && value <= 100) {
+    roasterState.cool = value;
     roasterController.setByte(ROASTER_MESSAGE_BYTE_COOL, value);
   }
   tc4LastTick = micros();
@@ -290,6 +294,7 @@ void handleCOOL(uint8_t value) {
 
 void handleFILTER(uint8_t value) {
   if (value >= 0 && value <= 100) {
+    roasterState.filter = value;
     roasterController.setByte(ROASTER_MESSAGE_BYTE_FILTER, value);
   }
   tc4LastTick = micros();
@@ -297,8 +302,10 @@ void handleFILTER(uint8_t value) {
 
 void handleDRUM(uint8_t value) {
   if (value != 0) {
+    roasterState.drum = 100;
     roasterController.setByte(ROATER_MESSAGE_BYTE_DRUM, 100);
   } else {
+    roasterState.drum = 0;
     roasterController.setByte(ROATER_MESSAGE_BYTE_DRUM, 0);
   }
   tc4LastTick = micros();
@@ -316,9 +323,9 @@ void handleREAD() {
     }
   }
   Serial.print(F(","));
-  Serial.print(sendBuffer[ROASTER_MESSAGE_BYTE_HEAT]);
+  Serial.print(roasterState.heat);
   Serial.print(',');
-  Serial.print(sendBuffer[ROASTER_MESSAGE_BYTE_VENT]);
+  Serial.print(roasterState.vent);
   Serial.print(',');
   Serial.println(F("0"));
 
