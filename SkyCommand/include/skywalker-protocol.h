@@ -26,59 +26,52 @@ class _SWProtocolBase {
         void initializeBuffer();
     public:
         virtual void begin() {};
+        void shutdown();
 };
 
 
-class _SWProtocolTx: protected _SWProtocolBase {
+class _SWProtocolTx: public _SWProtocolBase {
     protected:
         uint32_t pin;
-        _SWProtocolTx(uint32_t txpin): pin(txpin) {};
+        _SWProtocolTx(uint32_t txpin, uint8_t *buffer, size_t bufferSize):
+            _SWProtocolBase(buffer, bufferSize), pin(txpin) {};
         void updateCRC();
         void sendBit(uint8_t value);
         void sendPreamble();
     public:
         bool setByte(uint8_t idx, uint8_t value);
         void sendMessage();
-        void shutdown();
 };
 
 
-class _SWProtocolRx: protected _SWProtocolBase {
+class _SWProtocolRx: public _SWProtocolBase {
     protected:
         uint32_t pin;
-        _SWProtocolRx(uint32_t rxpin): pin(rxpin) {};
+        _SWProtocolRx(uint32_t rxpin, uint8_t *buffer, size_t bufferSize):
+            _SWProtocolBase(buffer, bufferSize), pin(rxpin) {};
         bool verifyCRC();
     public:
         bool getByte(uint8_t idx, uint8_t *value);
 };
 
 
-class _SWRoaster: public _SWProtocolBase {
-    protected:
-        _SWRoaster(): _SWProtocolBase(bufMemory, MESSAGE_LENGTH_ROASTER) {};
+class SWRoasterRx: public _SWProtocolRx {
+    private:
         uint8_t bufMemory[MESSAGE_LENGTH_ROASTER];
+    public:
+        SWRoasterRx():
+            _SWProtocolRx(CONTROLLER_PIN_RX, bufMemory, MESSAGE_LENGTH_ROASTER) {};
 };
 
 
-class _SWController: public _SWProtocolBase {
+class SWControllerTx: public _SWProtocolTx{
     protected:
-        _SWController(): _SWProtocolBase(bufMemory, MESSAGE_LENGTH_CONTROLLER) {};
         uint8_t bufMemory[MESSAGE_LENGTH_CONTROLLER];
-};
-
-
-class SWRoasterRx: public _SWRoaster, public _SWProtocolRx {
     public:
-        SWRoasterRx(): _SWProtocolRx(CONTROLLER_PIN_RX) {};
-};
-
-
-class SWControllerTx: public _SWController , public _SWProtocolTx{
-    public:
-        SWControllerTx(): _SWProtocolTx(CONTROLLER_PIN_TX) {};
+        SWControllerTx():
+            _SWProtocolTx(CONTROLLER_PIN_TX, bufMemory, MESSAGE_LENGTH_CONTROLLER) {};
         void begin();
 };
-
 
 
 #endif  // __SKYWALKER_PROTOCOL_H
