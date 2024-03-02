@@ -53,7 +53,6 @@ t_State state = {
   }
 };
 
-double chanTempPhysical[TEMPERATURE_CHANNELS_MAX] = {0, 0, 0, 0};
 uint8_t chanMapping[TEMPERATURE_CHANNELS_MAX]; 
 
 void JumpToBootloader(void);
@@ -118,7 +117,7 @@ void updateLCD(void) {
     if (mapping
         && (mapping >= 1)
         && (mapping <= TEMPERATURE_CHANNELS_MAX)) {
-        display.print(chanTempPhysical[mapping - 1]);
+        display.print(state.reported.chanTemp[mapping - 1]);
         display.print(F(" "));
     } else {
       display.print(F("0.0 "));
@@ -379,7 +378,7 @@ void handleREAD() {
     if ((mapping >= 1)
         && (mapping <= TEMPERATURE_CHANNELS_MAX)) {
         Serial.print(F(","));
-        Serial.print(chanTempPhysical[mapping - 1]);
+        Serial.print(state.reported.chanTemp[mapping - 1]);
     }
   }
   Serial.print(F(","));

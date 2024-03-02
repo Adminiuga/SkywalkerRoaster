@@ -8,8 +8,6 @@
 #include "thermocouple.h"
 
 extern t_State state;
-extern double chanTempPhysical[TEMPERATURE_CHANNELS_MAX];
-
 static MAX6675 thermoCouple(MAX_CS_PIN, &SPI);
 
 uint8_t processThermoCouple(void) {
@@ -25,9 +23,9 @@ uint8_t processThermoCouple(void) {
     int status = thermoCouple.read();
     if (status == 0) {
         if (state.cfg.CorF == 'C') {
-            TEMPERATURE_TC = thermoCouple.getTemperature();
+            TEMPERATURE_TC(state.reported) = thermoCouple.getTemperature();
         } else {
-            TEMPERATURE_TC = convertCelcius2Fahrenheit(thermoCouple.getTemperature());
+            TEMPERATURE_TC(state.reported) = convertCelcius2Fahrenheit(thermoCouple.getTemperature());
         }
     }
 
