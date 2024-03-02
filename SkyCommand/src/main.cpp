@@ -56,7 +56,6 @@ t_State state = {
 double chanTempPhysical[TEMPERATURE_CHANNELS_MAX] = {0, 0, 0, 0};
 uint8_t chanMapping[TEMPERATURE_CHANNELS_MAX]; 
 
-static ustick_t tc4LastTick = 0;
 static bool roaster_sync = false;
 
 void JumpToBootloader(void);
@@ -335,7 +334,7 @@ void handleHEAT(uint8_t value) {
     roasterState.heat = value;
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_HEAT], value);
   }
-  tc4LastTick = micros();
+  state.status.tc4LastTick = micros();
 }
 
 void handleVENT(uint8_t value) {
@@ -343,7 +342,7 @@ void handleVENT(uint8_t value) {
     roasterState.vent = value;
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_VENT], value);
   }
-  tc4LastTick = micros();
+  state.status.tc4LastTick = micros();
 }
 
 void handleCOOL(uint8_t value) {
@@ -351,7 +350,7 @@ void handleCOOL(uint8_t value) {
     roasterState.cool = value;
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_COOL], value);
   }
-  tc4LastTick = micros();
+  state.status.tc4LastTick = micros();
 }
 
 void handleFILTER(uint8_t value) {
@@ -359,7 +358,7 @@ void handleFILTER(uint8_t value) {
     roasterState.filter = value;
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_FILTER], value);
   }
-  tc4LastTick = micros();
+  state.status.tc4LastTick = micros();
 }
 
 void handleDRUM(uint8_t value) {
@@ -370,7 +369,7 @@ void handleDRUM(uint8_t value) {
     roasterState.drum = 0;
     setValue(&sendBuffer[ROATER_MESSAGE_BYTE_DRUM], 0);
   }
-  tc4LastTick = micros();
+  state.status.tc4LastTick = micros();
 }
 
 void handleREAD() {
@@ -391,12 +390,12 @@ void handleREAD() {
   Serial.print(',');
   Serial.println(F("0"));
 
-  tc4LastTick = micros();
+  state.status.tc4LastTick = micros();
 }
 
 bool itsbeentoolong() {
   ustick_t now = micros();
-  ustick_t duration = now - tc4LastTick;
+  ustick_t duration = now - state.status.tc4LastTick;
   if (duration > (TC4_COMM_TIMEOUT_MS * 1000)) {
     shutdown();  //We turn everything off
   }
