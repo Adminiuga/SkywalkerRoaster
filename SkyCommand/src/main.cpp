@@ -130,20 +130,20 @@ void updateLCD(void) {
 
   // New line
   display.print(F("Heat: "));
-  display.print(roasterState.heat, 16);
+  display.print(state.commanded.heat, 16);
   display.print(F(" Vent: "));
-  display.print(roasterState.vent, 16);
+  display.print(state.commanded.vent, 16);
   display.println();
 
   // New line
   display.print(F("Fltr: "));
-  display.print(roasterState.filter, 16);
+  display.print(state.commanded.filter, 16);
   display.print(F(" Cool: "));
-  display.print(roasterState.cool, 16);
+  display.print(state.commanded.cool, 16);
   display.println();
 
   // New line
-  if (roasterState.drum) {
+  if (state.commanded.drum) {
     display.println(F("Drum is On"));
   } else {
     display.println(F("Drum is Off"));
@@ -321,13 +321,13 @@ bool getRoasterMessage() {
   }
   count = 0;
 
-  TEMPERATURE_ROASTER = calculateTemp();
+  TEMPERATURE_ROASTER(state.reported) = calculateTemp();
   return true;
 }
 
 void handleHEAT(uint8_t value) {
   if (value >= 0 && value <= 100) {
-    roasterState.heat = value;
+    state.commanded.heat = value;
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_HEAT], value);
   }
   state.status.tc4LastTick = micros();
@@ -335,7 +335,7 @@ void handleHEAT(uint8_t value) {
 
 void handleVENT(uint8_t value) {
   if (value >= 0 && value <= 100) {
-    roasterState.vent = value;
+    state.commanded.vent = value;
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_VENT], value);
   }
   state.status.tc4LastTick = micros();
@@ -343,7 +343,7 @@ void handleVENT(uint8_t value) {
 
 void handleCOOL(uint8_t value) {
   if (value >= 0 && value <= 100) {
-    roasterState.cool = value;
+    state.commanded.cool = value;
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_COOL], value);
   }
   state.status.tc4LastTick = micros();
@@ -351,7 +351,7 @@ void handleCOOL(uint8_t value) {
 
 void handleFILTER(uint8_t value) {
   if (value >= 0 && value <= 100) {
-    roasterState.filter = value;
+    state.commanded.filter = value;
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_FILTER], value);
   }
   state.status.tc4LastTick = micros();
@@ -359,10 +359,10 @@ void handleFILTER(uint8_t value) {
 
 void handleDRUM(uint8_t value) {
   if (value != 0) {
-    roasterState.drum = 100;
+    state.commanded.drum = 100;
     setValue(&sendBuffer[ROATER_MESSAGE_BYTE_DRUM], 100);
   } else {
-    roasterState.drum = 0;
+    state.commanded.drum = 0;
     setValue(&sendBuffer[ROATER_MESSAGE_BYTE_DRUM], 0);
   }
   state.status.tc4LastTick = micros();
@@ -380,9 +380,9 @@ void handleREAD() {
     }
   }
   Serial.print(F(","));
-  Serial.print(roasterState.heat);
+  Serial.print(state.commanded.heat);
   Serial.print(',');
-  Serial.print(roasterState.vent);
+  Serial.print(state.commanded.vent);
   Serial.print(',');
   Serial.println(F("0"));
 
