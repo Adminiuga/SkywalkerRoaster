@@ -12,7 +12,7 @@
  * Base Protocol constuctor: clear up the buffer
  */
 _SWProtocolBase::_SWProtocolBase(uint8_t *buffer, size_t bufferSize) : buffer(buffer), bufferSize(bufferSize) {
-    shutdown();
+    _clearBuffer();
 };
 
 
@@ -31,11 +31,15 @@ uint8_t _SWProtocolBase::calculateCRC() {
 /*
  * Zero out the buffer, aka shutdown
  */
-void _SWProtocolBase::shutdown() {
+void _SWProtocolBase::_clearBuffer() {
     for (unsigned int i = 0; i < bufferSize; i++) {
         buffer[i] = 0;
     }
 };
+
+void _SWProtocolBase::shutdown() {
+    return _clearBuffer();
+}
 
 
 /*
