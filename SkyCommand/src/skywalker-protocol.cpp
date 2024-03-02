@@ -2,10 +2,13 @@
 
 #include "skywalker-protocol.h"
 
-#define PROTOCOL_DELAY_1            1500
-#define PROTOCOL_DELAY_0            650
-#define PROTOCOL_PREAMBLE_LOW_US    7500UL
-#define PROTOCOL_PREAMBLE_HIGH_US   3800UL
+#define SWPROT_TX_1_LENGTH_US       1500
+#define SWPROT_TX_0_LENGTH_US       650
+#define SWPROT_TX_PREAMBLE_LOW_US   7500UL
+#define SWPROT_TX_PREAMBLE_HIGH_US  3800UL
+#define SWPROT_RX_PREAMBLE_LOW_US   7000U
+#define SWPROT_RX_1_LENGTH_US       1200U
+#define MESAGE_SEND_INTERVAL_US     200000UL
 
 
 /*
@@ -64,9 +67,9 @@ void _SWProtocolTx::updateCRC() {
 void _SWProtocolTx::sendBit(uint8_t value) {
   //Assuming pin is HIGH when we get it
   digitalWrite(pin, LOW);
-  delayMicroseconds(value ? PROTOCOL_DELAY_1 : PROTOCOL_DELAY_0);
+  delayMicroseconds(value ? SWPROT_TX_1_LENGTH_US : SWPROT_TX_0_LENGTH_US);
   digitalWrite(pin, HIGH);
-  delayMicroseconds(PROTOCOL_DELAY_1 >> 1);  //delay between bits
+  delayMicroseconds(SWPROT_TX_1_LENGTH_US >> 1);  //delay between bits
   //we leave it high
 }
 
@@ -77,9 +80,9 @@ void _SWProtocolTx::sendBit(uint8_t value) {
 void _SWProtocolTx::sendPreamble() {
     //Assuming pin is HIGH when we get it
     digitalWrite(pin, LOW);
-    delayMicroseconds(PROTOCOL_PREAMBLE_LOW_US);
+    delayMicroseconds(SWPROT_TX_PREAMBLE_LOW_US);
     digitalWrite(pin, HIGH);
-    delayMicroseconds(PROTOCOL_PREAMBLE_HIGH_US);
+    delayMicroseconds(SWPROT_TX_PREAMBLE_HIGH_US);
     //we leave it high
 }
 
