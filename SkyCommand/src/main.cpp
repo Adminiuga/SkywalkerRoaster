@@ -53,8 +53,6 @@ t_State state = {
   }
 };
 
-uint8_t chanMapping[TEMPERATURE_CHANNELS_MAX]; 
-
 void JumpToBootloader(void);
 
 #ifdef USE_LCD
@@ -113,7 +111,7 @@ void updateLCD(void) {
   display.print(F("Temp: "));
   uint8_t mapping = 0;
   for (uint8_t i = 0; i < 2; i++) {
-    mapping = chanMapping[i];
+    mapping = state.cfg.chanMapping[i];
     if (mapping
         && (mapping >= 1)
         && (mapping <= TEMPERATURE_CHANNELS_MAX)) {
@@ -374,7 +372,7 @@ void handleREAD() {
   Serial.print(F("0.0"));
   uint8_t mapping = 0;
   for (uint8_t i = 0; i < TEMPERATURE_CHANNELS_MAX; i++) {
-    mapping = chanMapping[i];
+    mapping = state.cfg.chanMapping[i];
     if ((mapping >= 1)
         && (mapping <= TEMPERATURE_CHANNELS_MAX)) {
         Serial.print(F(","));
@@ -421,7 +419,7 @@ void handleCHAN(String channels) {
     chanNum = atoi(strbuf);
     if ( (chanNum >= 0)
          && (chanNum <= TEMPERATURE_CHANNELS_MAX)) {
-          chanMapping[i] = chanNum;
+          state.cfg.chanMapping[i] = chanNum;
           Serial.print(chanNum);
     } else {
           Serial.print(F("0"));
