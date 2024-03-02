@@ -24,7 +24,7 @@ class _SWProtocolBase {
         // constructor for ProtocolTx/Rx child classes
         _SWProtocolBase() {};
         _SWProtocolBase(uint8_t *buffer, size_t bufferSize);
-        void initializeBuffer();
+        void _clearBuffer();
     public:
         virtual void begin() {};
         virtual void loopTick() {};
