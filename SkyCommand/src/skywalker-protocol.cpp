@@ -42,7 +42,7 @@ void _SWProtocolBase::shutdown() {
  * Initialize Controller transmission
  */
 void SWControllerTx::begin(void) {
-  pinMode(CONTROLLER_PIN_TX, OUTPUT);
+  pinMode(pin, OUTPUT);
 }
 
 
