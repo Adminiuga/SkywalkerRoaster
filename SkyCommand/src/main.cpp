@@ -56,8 +56,6 @@ t_State state = {
 double chanTempPhysical[TEMPERATURE_CHANNELS_MAX] = {0, 0, 0, 0};
 uint8_t chanMapping[TEMPERATURE_CHANNELS_MAX]; 
 
-static bool roaster_sync = false;
-
 void JumpToBootloader(void);
 
 #ifdef USE_LCD
@@ -98,7 +96,7 @@ void updateLCD(void) {
   lcd_last_tick = tick;
   display.clearDisplay();
   display.setCursor(0,0);
-  if (!roaster_sync) {
+  if (!(state.status.isSynchronized)) {
     if (invert_text) {
       display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     } else {
@@ -313,7 +311,8 @@ bool getRoasterMessage() {
     count++;
     WARN(F("Failed to get message, attempt #"));
     WARNLN(count);
-    return (count < MESSAGE_RX_MAX_ATTEMPTS) && roaster_sync;
+    return (count < MESSAGE_RX_MAX_ATTEMPTS)
+           && (state.status.isSynchronized);
   }
 
   // received message and passed checksum verification
@@ -489,7 +488,7 @@ void loop() {
 
   sendMessage();
 
-  roaster_sync = getRoasterMessage();
+  state.status.isSynchronized = getRoasterMessage();
 
 #ifdef USE_THERMOCOUPLE
   state.status.tcStatus = processThermoCouple();
