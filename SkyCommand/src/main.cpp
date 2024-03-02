@@ -19,6 +19,7 @@
 #endif
 
 #include "roaster.h"
+#include "logging.h"
 #include "skywalker-protocol.h"
 
 typedef struct {
