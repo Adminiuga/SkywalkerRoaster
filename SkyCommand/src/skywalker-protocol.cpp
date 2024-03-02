@@ -2,8 +2,11 @@
 
 #include "skywalker-protocol.h"
 
-#define PROTOCOL_DELAY_1    1500
-#define PROTOCOL_DELAY_0    650
+#define PROTOCOL_DELAY_1            1500
+#define PROTOCOL_DELAY_0            650
+#define PROTOCOL_PREAMBLE_LOW_US    7500UL
+#define PROTOCOL_PREAMBLE_HIGH_US   3800UL
+
 
 /*
  * Base Protocol constuctor: clear up the buffer
@@ -59,7 +62,7 @@ void _SWProtocolTx::sendBit(uint8_t value) {
   digitalWrite(pin, LOW);
   delayMicroseconds(value ? PROTOCOL_DELAY_1 : PROTOCOL_DELAY_0);
   digitalWrite(pin, HIGH);
-  delayMicroseconds(750);  //delay between bits
+  delayMicroseconds(PROTOCOL_DELAY_1 >> 1);  //delay between bits
   //we leave it high
 }
 
@@ -70,9 +73,9 @@ void _SWProtocolTx::sendBit(uint8_t value) {
 void _SWProtocolTx::sendPreamble() {
     //Assuming pin is HIGH when we get it
     digitalWrite(pin, LOW);
-    delayMicroseconds(7500);
+    delayMicroseconds(PROTOCOL_PREAMBLE_LOW_US);
     digitalWrite(pin, HIGH);
-    delayMicroseconds(3800);
+    delayMicroseconds(PROTOCOL_PREAMBLE_HIGH_US);
     //we leave it high
 }
 
