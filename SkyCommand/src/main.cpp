@@ -61,7 +61,6 @@ uint8_t tcStatus = 1;
 #endif
 
 static ustick_t tc4LastTick = 0;
-char CorF = 'F';
 static bool roaster_sync = false;
 
 void JumpToBootloader(void);
@@ -132,7 +131,7 @@ void updateLCD(void) {
       display.print(F("0.0 "));
     }
   }
-  if (CorF == 'F') {
+  if (state.cfg.CorF == 'F') {
     display.println(F("F"));
   } else {
     display.println(F("C"));
@@ -246,7 +245,7 @@ double calculateTemp() {
       + y * (247.6124684730026 + 2868.4191998911865 * x
       + y * (-1349.1588373011923))));
 
-  if ( CorF == 'C' ) v = (v - 32) * 5 / 9;
+  if ( state.cfg.CorF == 'C' ) v = (v - 32) * 5 / 9;
 
   return v;
 }
@@ -533,7 +532,7 @@ void loop() {
     } else if (command == "CHAN" && (split > 0)) { //Hanlde the TC4 init message
       handleCHAN(input.substring(split+1));
     } else if (command == "UNITS") {
-      if (split >= 0) CorF = input.charAt(split + 1);
+      if (split >= 0) state.cfg.CorF = input.charAt(split + 1);
 #ifdef ARDUINO_BLACKPILL_F411CE
     } else if (command == "DFU") {
       if (split < 0) {
