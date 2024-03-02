@@ -47,7 +47,7 @@ void SWControllerTx::begin(void) {
  * update checksum based on the buffer content
  */
 void _SWProtocolTx::updateCRC() {
-    buffer[bufferSize] = calculateCRC();
+    buffer[bufferSize - 1] = calculateCRC();
 }
 
 
@@ -87,7 +87,7 @@ void _SWProtocolTx::sendMessage() {
     sendPreamble();
 
     // send Message
-    for (unsigned int i = 0; i < bufferSize; i++) {
+    for (uint8_t i = 0; i < bufferSize; i++) {
         for (uint8_t bit = 0; bit < 8; bit++) {
             sendBit(bitRead(buffer[i], bit));
         }
