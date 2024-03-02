@@ -56,10 +56,6 @@ t_State state = {
 double chanTempPhysical[TEMPERATURE_CHANNELS_MAX] = {0, 0, 0, 0};
 uint8_t chanMapping[TEMPERATURE_CHANNELS_MAX]; 
 
-#ifdef USE_THERMOCOUPLE
-uint8_t tcStatus = 1;
-#endif
-
 static ustick_t tc4LastTick = 0;
 static bool roaster_sync = false;
 
@@ -497,7 +493,7 @@ void loop() {
   roaster_sync = getRoasterMessage();
 
 #ifdef USE_THERMOCOUPLE
-  tcStatus = processThermoCouple();
+  state.status.tcStatus = processThermoCouple();
 #endif
 
   while (Serial.available() > 0) {
