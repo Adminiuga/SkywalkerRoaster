@@ -1,14 +1,18 @@
 #include <Arduino.h>
 
+#include "logging.h"
 #include "skywalker-protocol.h"
 
 #define SWPROT_TX_1_LENGTH_US       1500
 #define SWPROT_TX_0_LENGTH_US       650
 #define SWPROT_TX_PREAMBLE_LOW_US   7500UL
 #define SWPROT_TX_PREAMBLE_HIGH_US  3800UL
+// number of attempts to receive a preamble
+#define SWPROT_RX_PREAMBLE_ATTEMPTS 60
 #define SWPROT_RX_PREAMBLE_LOW_US   7000U
 #define SWPROT_RX_1_LENGTH_US       1200U
 #define MESAGE_SEND_INTERVAL_US     200000UL
+#define MESSAGE_TIMEOUT_MS          3000UL
 
 
 /*
@@ -128,6 +132,18 @@ void _SWProtocolTx::loopTick() {
 
 
 /*
+ * RX Constructor
+ */
+_SWProtocolRx::_SWProtocolRx(uint32_t rxpin, uint8_t *buffer, size_t bufferSize):
+            _SWProtocolBase(buffer, bufferSize),
+            pin(rxpin) {
+
+    // Initialize instance
+    lastSuccRx = 0;
+};
+
+
+/*
  * verify CRC, return true of crc matches buffer content
  */
 bool _SWProtocolRx::verifyCRC() {
@@ -143,4 +159,59 @@ bool _SWProtocolRx::getByte(uint8_t idx, uint8_t *value) {
 
     *value = buffer[idx];
     return true;
+}
+
+
+/*
+ * Return true when the reciever is in sync with the transmitter,
+ * i.e. we successfuly recieved a frame not too long ago
+ */
+bool _SWProtocolRx::isSynchronized() {
+    return (micros() - lastSuccRx) < (MESSAGE_TIMEOUT_MS * 1000);
+}
+
+
+/*
+ * Recieve frame. Return true if successfully received
+ */
+bool _SWProtocolRx::receiveFrame() {
+  unsigned long pulseDuration = 0;
+
+  // clear buffer and reset checksum
+  _clearBuffer();
+
+  uint8_t attempts = 0;
+  bool preambleDetected = false;
+  do {
+    pulseDuration = pulseIn(pin, LOW, SWPROT_RX_PREAMBLE_LOW_US << 2);
+    if (pulseDuration == 0) {
+        return false;
+    } else if ( pulseDuration >= SWPROT_RX_PREAMBLE_LOW_US) {
+      preambleDetected = true;
+      break;
+    }
+    attempts++;
+  } while (attempts <= SWPROT_RX_PREAMBLE_ATTEMPTS);
+
+  if (!preambleDetected) {
+    WARN(F("Did not detect preamble after "));
+    WARN(attempts);
+    WARNLN(F(" attempts"));
+    return false;
+  }
+
+  for (uint8_t i = 0; i < (bufferSize << 3); i++) {  //Read the proper number of bits..
+    pulseDuration = pulseIn(pin, LOW);
+    if (pulseDuration == 0) {
+      WARN(F("Failed to get bit #"));
+      WARNLN(i);
+      return false;
+    }
+    //Bits are received in LSB order..
+    if (pulseDuration > SWPROT_RX_1_LENGTH_US) {  // we received a 1
+      buffer[i / 8] |= (1 << (i % 8));
+    }
+  }
+
+  return true;
 }

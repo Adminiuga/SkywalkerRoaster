@@ -48,11 +48,15 @@ class _SWProtocolTx: public _SWProtocolBase {
 class _SWProtocolRx: public _SWProtocolBase {
     protected:
         uint32_t pin;
-        _SWProtocolRx(uint32_t rxpin, uint8_t *buffer, size_t bufferSize):
-            _SWProtocolBase(buffer, bufferSize), pin(rxpin) {};
+        uint32_t lastSuccRx;
+        _SWProtocolRx(uint32_t rxpin, uint8_t *buffer, size_t bufferSize);
+        bool receiveFrame();
         bool verifyCRC();
     public:
         bool getByte(uint8_t idx, uint8_t *value);
+        bool isSynchronized();
+        void loopTick();
+
 };
 
 
