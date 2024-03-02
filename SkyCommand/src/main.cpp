@@ -20,25 +20,41 @@
 
 #include "roaster.h"
 
-typedef struct {
-  uint8_t heat;
-  uint8_t vent;
-  uint8_t cool;
-  uint8_t filter;
-  uint8_t drum;
-} t_stateRoaster;
-
 uint8_t receiveBuffer[ROASTER_MESSAGE_LENGTH];
 uint8_t sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH];
-t_stateRoaster roasterState;
+
+/*
+ * Until this is replaced by an Class, this structure
+ * contains the entire state, status, config, reported
+ * and commanded roaster status
+ */
+t_State state = {
+  // t_StateCommanded
+  {0, 0, 0, 0, 0},
+  // t_StateReported
+  {0, 0, 0, 0},
+  // t_Config
+  {
+    // chanMapping
+#ifdef USE_THERMOCOUPLE
+    {TEMPERATURE_CHANNEL_ROASTER+1, TEMPERATURE_CHANNEL_THERMOCOUPLE+1, 0, 0},
+#else
+    {0, TEMPERATURE_CHANNEL_ROASTER+1, 0, 0},
+#endif // USE_THERMOCOUPLE
+    'F',
+  },
+  // t_Status
+  {
+    0,      // tc4LastTick
+    false,  // isSynchronized
+#ifdef USE_THERMOCOUPLE
+    1       // tcStatus
+#endif
+  }
+};
 
 double chanTempPhysical[TEMPERATURE_CHANNELS_MAX] = {0, 0, 0, 0};
-uint8_t chanMapping[TEMPERATURE_CHANNELS_MAX] =
-#ifdef USE_THERMOCOUPLE
-  {TEMPERATURE_CHANNEL_ROASTER+1, TEMPERATURE_CHANNEL_THERMOCOUPLE+1, 0, 0};
-#else
-  {0, TEMPERATURE_CHANNEL_ROASTER+1, 0, 0};
-#endif // USE_THERMOCOUPLE
+uint8_t chanMapping[TEMPERATURE_CHANNELS_MAX]; 
 
 #ifdef USE_THERMOCOUPLE
 uint8_t tcStatus = 1;
@@ -321,7 +337,8 @@ bool getRoasterMessage() {
 
 void handleHEAT(uint8_t value) {
   if (value >= 0 && value <= 100) {
-    roasterState.heat = value;    setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_HEAT], value);
+    roasterState.heat = value;
+    setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_HEAT], value);
   }
   tc4LastTick = micros();
 }
