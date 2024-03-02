@@ -140,6 +140,7 @@ _SWProtocolRx::_SWProtocolRx(uint32_t rxpin, uint8_t *buffer, size_t bufferSize)
 
     // Initialize instance
     lastSuccRx = 0;
+    attemptCount = 0;
 };
 
 
@@ -212,6 +213,30 @@ bool _SWProtocolRx::receiveFrame() {
       buffer[i / 8] |= (1 << (i % 8));
     }
   }
+
+  return true;
+}
+
+
+/*
+ * receive the message
+ */
+bool _SWProtocolRx::getMessage() {
+  if ( !( getMessage() and verifyCRC())) {
+    // timeout receiving message or receiving it correctly
+    attemptCount++;
+    return isSynchronized();
+  }
+
+  // received message and passed checksum verification
+
+  if (attemptCount > 0) {
+    WARN(F("[!] WARN: Took "));
+    WARN(count);
+    WARNLN(F(" tries to recieve a frame."));
+  }
+  attemptCount = 0;
+  lastSuccRx = micros();
 
   return true;
 }
