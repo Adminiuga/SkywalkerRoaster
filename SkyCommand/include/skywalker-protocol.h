@@ -13,6 +13,7 @@
 #define MESSAGE_LENGTH_CONTROLLER   6U
 #define SWPROT_PREAMBLE_LENGTH_US   7000U
 #define SWPROT_ONE_LENGTH_US        1200U
+#define MESAGE_SEND_INTERVAL_US     200000UL
 
 
 class _SWProtocolBase {
@@ -26,6 +27,7 @@ class _SWProtocolBase {
         void initializeBuffer();
     public:
         virtual void begin() {};
+        virtual void loopTick() {};
         void shutdown();
 };
 
@@ -33,12 +35,14 @@ class _SWProtocolBase {
 class _SWProtocolTx: public _SWProtocolBase {
     protected:
         uint32_t pin;
+        uint32_t lastTick;
         _SWProtocolTx(uint32_t txpin, uint8_t *buffer, size_t bufferSize):
             _SWProtocolBase(buffer, bufferSize), pin(txpin) {};
         void updateCRC();
         void sendBit(uint8_t value);
         void sendPreamble();
     public:
+        void loopTick();
         bool setByte(uint8_t idx, uint8_t value);
         void sendMessage();
 };

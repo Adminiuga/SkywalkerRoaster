@@ -426,7 +426,7 @@ void loop() {
     roasterController.shutdown();
   }
 
-  roasterController.sendMessage();
+  roasterController.loopTick();
 
   roaster_sync = getRoasterMessage();
 
