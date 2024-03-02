@@ -107,6 +107,17 @@ bool _SWProtocolTx::setByte(uint8_t idx, uint8_t value) {
 
 
 /*
+ * Process loop iteration
+ */
+void _SWProtocolTx::loopTick() {
+    if ((micros() - lastTick) < MESAGE_SEND_INTERVAL_US) return;
+
+    sendMessage();
+    lastTick = micros();
+}
+
+
+/*
  * verify CRC, return true of crc matches buffer content
  */
 bool _SWProtocolRx::verifyCRC() {

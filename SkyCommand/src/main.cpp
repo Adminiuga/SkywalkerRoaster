@@ -441,7 +441,7 @@ void loop() {
     roasterController.shutdown();
   }
 
-  roasterController.sendMessage();
+  roasterController.loopTick();
 
   state.status.isSynchronized = getRoasterMessage();
 
