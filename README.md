@@ -13,6 +13,18 @@ I use an arduino leonardo with a USB cable soldered to the Vin, GND, and Digital
 
 The black cable goes to the USB port on the back of the roaster (that's only USB in form.. it's not actually using USB communications), the white one to my computer running Artisan. 
 
+##### BlackPill F411CE Pinout
+
+| Pin  | Function | Description |
+| ---- | -------- | ----------- |
+| PA9  | Controller Data Pin | Data sent to roaster (Controller Tx/USB-)|
+| PA10 | Roaster Data Pin | Data received from roaster (Roaster Tx/USB+) |
+| PA4  | SPI CS  | MAX6675 CS |
+| PA5  | SPI SCK | MAX6675 CLK |
+| PA6  | SPI MISO | MAX6675 SO |
+| PB6  | i2c SCL | Oled screen SCL |
+| PB7  | i2c SDA | Oled screen SDA |
+
 
 #### Artisan Config
 Here's how I have Artisan configured. 
