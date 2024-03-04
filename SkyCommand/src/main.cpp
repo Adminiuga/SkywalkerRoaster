@@ -23,21 +23,35 @@
 uint8_t receiveBuffer[ROASTER_MESSAGE_LENGTH];
 uint8_t sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH];
 
-double chanTempPhysical[TEMPERATURE_CHANNELS_MAX] = {0, 0, 0, 0};
-uint8_t chanMapping[TEMPERATURE_CHANNELS_MAX] =
+/*
+ * Until this is replaced by an Class, this structure
+ * contains the entire state, status, config, reported
+ * and commanded roaster status
+ */
+t_State state = {
+  // t_StateCommanded
+  {0, 0, 0, 0, 0},
+  // t_StateReported
+  {0, 0, 0, 0},
+  // t_Config
+  {
+    // chanMapping
 #ifdef USE_THERMOCOUPLE
-  {TEMPERATURE_CHANNEL_ROASTER+1, TEMPERATURE_CHANNEL_THERMOCOUPLE+1, 0, 0};
+    {TEMPERATURE_CHANNEL_ROASTER+1, TEMPERATURE_CHANNEL_THERMOCOUPLE+1, 0, 0},
 #else
-  {0, TEMPERATURE_CHANNEL_ROASTER+1, 0, 0};
+    {0, TEMPERATURE_CHANNEL_ROASTER+1, 0, 0},
 #endif // USE_THERMOCOUPLE
-
+    'F',
+  },
+  // t_Status
+  {
+    0,      // tc4LastTick
+    false,  // isSynchronized
 #ifdef USE_THERMOCOUPLE
-uint8_t tcStatus = 1;
+    1       // tcStatus
 #endif
-
-static ustick_t tc4LastTick = 0;
-char CorF = 'F';
-static bool roaster_sync = false;
+  }
+};
 
 void JumpToBootloader(void);
 
@@ -79,7 +93,7 @@ void updateLCD(void) {
   lcd_last_tick = tick;
   display.clearDisplay();
   display.setCursor(0,0);
-  if (!roaster_sync) {
+  if (!(state.status.isSynchronized)) {
     if (invert_text) {
       display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
     } else {
@@ -97,17 +111,17 @@ void updateLCD(void) {
   display.print(F("Temp: "));
   uint8_t mapping = 0;
   for (uint8_t i = 0; i < 2; i++) {
-    mapping = chanMapping[i];
+    mapping = state.cfg.chanMapping[i];
     if (mapping
         && (mapping >= 1)
         && (mapping <= TEMPERATURE_CHANNELS_MAX)) {
-        display.print(chanTempPhysical[mapping - 1]);
+        display.print(state.reported.chanTemp[mapping - 1]);
         display.print(F(" "));
     } else {
       display.print(F("0.0 "));
     }
   }
-  if (CorF == 'F') {
+  if (state.cfg.CorF == 'F') {
     display.println(F("F"));
   } else {
     display.println(F("C"));
@@ -116,20 +130,20 @@ void updateLCD(void) {
 
   // New line
   display.print(F("Heat: "));
-  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_HEAT], 16);
+  display.print(state.commanded.heat, 16);
   display.print(F(" Vent: "));
-  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_VENT], 16);
+  display.print(state.commanded.vent, 16);
   display.println();
 
   // New line
   display.print(F("Fltr: "));
-  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_FILTER], 16);
+  display.print(state.commanded.filter, 16);
   display.print(F(" Cool: "));
-  display.print(sendBuffer[ROASTER_MESSAGE_BYTE_COOL], 16);
+  display.print(state.commanded.cool, 16);
   display.println();
 
   // New line
-  if (sendBuffer[ROATER_MESSAGE_BYTE_DRUM]) {
+  if (state.commanded.drum) {
     display.println(F("Drum is On"));
   } else {
     display.println(F("Drum is Off"));
@@ -221,7 +235,7 @@ double calculateTemp() {
       + y * (247.6124684730026 + 2868.4191998911865 * x
       + y * (-1349.1588373011923))));
 
-  if ( CorF == 'C' ) v = (v - 32) * 5 / 9;
+  if ( state.cfg.CorF == 'C' ) v = (v - 32) * 5 / 9;
 
   return v;
 }
@@ -282,13 +296,6 @@ bool calculateRoasterChecksum() {
   return sum == receiveBuffer[ROASTER_MESSAGE_LENGTH - 1];
 }
 
-void printBuffer(int bytes) {
-  for (int i = 0; i < bytes; i++) {
-    Serial.print(sendBuffer[i], HEX);
-    Serial.print(',');
-  }
-  Serial.print("\n");
-}
 
 bool getRoasterMessage() {
   DEBUG(F("R "));
@@ -301,7 +308,8 @@ bool getRoasterMessage() {
     count++;
     WARN(F("Failed to get message, attempt #"));
     WARNLN(count);
-    return (count < MESSAGE_RX_MAX_ATTEMPTS) && roaster_sync;
+    return (count < MESSAGE_RX_MAX_ATTEMPTS)
+           && (state.status.isSynchronized);
   }
 
   // received message and passed checksum verification
@@ -313,71 +321,77 @@ bool getRoasterMessage() {
   }
   count = 0;
 
-  TEMPERATURE_ROASTER = calculateTemp();
+  TEMPERATURE_ROASTER(state.reported) = calculateTemp();
   return true;
 }
 
 void handleHEAT(uint8_t value) {
   if (value >= 0 && value <= 100) {
+    state.commanded.heat = value;
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_HEAT], value);
   }
-  tc4LastTick = micros();
+  state.status.tc4LastTick = micros();
 }
 
 void handleVENT(uint8_t value) {
   if (value >= 0 && value <= 100) {
+    state.commanded.vent = value;
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_VENT], value);
   }
-  tc4LastTick = micros();
+  state.status.tc4LastTick = micros();
 }
 
 void handleCOOL(uint8_t value) {
   if (value >= 0 && value <= 100) {
+    state.commanded.cool = value;
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_COOL], value);
   }
-  tc4LastTick = micros();
+  state.status.tc4LastTick = micros();
 }
 
 void handleFILTER(uint8_t value) {
   if (value >= 0 && value <= 100) {
+    state.commanded.filter = value;
     setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_FILTER], value);
   }
-  tc4LastTick = micros();
+  state.status.tc4LastTick = micros();
 }
 
 void handleDRUM(uint8_t value) {
   if (value != 0) {
+    state.commanded.drum = 100;
     setValue(&sendBuffer[ROATER_MESSAGE_BYTE_DRUM], 100);
   } else {
+    state.commanded.drum = 0;
     setValue(&sendBuffer[ROATER_MESSAGE_BYTE_DRUM], 0);
   }
-  tc4LastTick = micros();
+  state.status.tc4LastTick = micros();
 }
 
 void handleREAD() {
   Serial.print(F("0.0"));
   uint8_t mapping = 0;
   for (uint8_t i = 0; i < TEMPERATURE_CHANNELS_MAX; i++) {
-    mapping = chanMapping[i];
+    mapping = state.cfg.chanMapping[i];
     if ((mapping >= 1)
         && (mapping <= TEMPERATURE_CHANNELS_MAX)) {
         Serial.print(F(","));
-        Serial.print(chanTempPhysical[mapping - 1]);
+        Serial.print(state.reported.chanTemp[mapping - 1]);
     }
   }
   Serial.print(F(","));
-  Serial.print(sendBuffer[ROASTER_MESSAGE_BYTE_HEAT]);
+  Serial.print(state.commanded.heat);
   Serial.print(',');
-  Serial.print(sendBuffer[ROASTER_MESSAGE_BYTE_VENT]);
+  Serial.print(state.commanded.vent);
   Serial.print(',');
   Serial.println(F("0"));
 
-  tc4LastTick = micros();
+  state.status.tc4LastTick = micros();
 }
 
 bool itsbeentoolong() {
   ustick_t now = micros();
-  ustick_t duration = now - tc4LastTick;
+  ustick_t duration = now - state.status.tc4LastTick;
   if (duration > (TC4_COMM_TIMEOUT_MS * 1000)) {
     shutdown();  //We turn everything off
   }
@@ -405,7 +419,7 @@ void handleCHAN(String channels) {
     chanNum = atoi(strbuf);
     if ( (chanNum >= 0)
          && (chanNum <= TEMPERATURE_CHANNELS_MAX)) {
-          chanMapping[i] = chanNum;
+          state.cfg.chanMapping[i] = chanNum;
           Serial.print(chanNum);
     } else {
           Serial.print(F("0"));
@@ -471,10 +485,10 @@ void loop() {
 
   sendMessage();
 
-  roaster_sync = getRoasterMessage();
+  state.status.isSynchronized = getRoasterMessage();
 
 #ifdef USE_THERMOCOUPLE
-  tcStatus = processThermoCouple();
+  state.status.tcStatus = processThermoCouple();
 #endif
 
   while (Serial.available() > 0) {
@@ -509,7 +523,7 @@ void loop() {
     } else if (command == "CHAN" && (split > 0)) { //Hanlde the TC4 init message
       handleCHAN(input.substring(split+1));
     } else if (command == "UNITS") {
-      if (split >= 0) CorF = input.charAt(split + 1);
+      if (split >= 0) state.cfg.CorF = input.charAt(split + 1);
 #ifdef ARDUINO_BLACKPILL_F411CE
     } else if (command == "DFU") {
       if (split < 0) {

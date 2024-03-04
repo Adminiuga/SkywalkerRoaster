@@ -7,9 +7,7 @@
 #include "roaster.h"
 #include "thermocouple.h"
 
-extern char CorF;
-extern double chanTempPhysical[TEMPERATURE_CHANNELS_MAX];
-
+extern t_State state;
 static MAX6675 thermoCouple(MAX_CS_PIN, &SPI);
 
 uint8_t processThermoCouple(void) {
@@ -24,10 +22,10 @@ uint8_t processThermoCouple(void) {
     lastTick = tick;
     int status = thermoCouple.read();
     if (status == 0) {
-        if (CorF == 'C') {
-            TEMPERATURE_TC = thermoCouple.getTemperature();
+        if (state.cfg.CorF == 'C') {
+            TEMPERATURE_TC(state.reported) = thermoCouple.getTemperature();
         } else {
-            TEMPERATURE_TC = convertCelcius2Fahrenheit(thermoCouple.getTemperature());
+            TEMPERATURE_TC(state.reported) = convertCelcius2Fahrenheit(thermoCouple.getTemperature());
         }
     }
 
