@@ -11,20 +11,24 @@
 
 #define MESSAGE_LENGTH_ROASTER      7U
 #define MESSAGE_LENGTH_CONTROLLER   6U
+#define SWPROT_TICK_INTERVAL_US     200000UL
 
 
 class _SWProtocolBase {
     protected:
         uint8_t *buffer;
-        size_t bufferSize;
+        size_t   bufferSize;
+        uint32_t tickInterval, lastTick;
         uint8_t calculateCRC();
         // constructor for ProtocolTx/Rx child classes
         _SWProtocolBase() {};
         _SWProtocolBase(uint8_t *buffer, size_t bufferSize);
         void _clearBuffer();
+        virtual void tickIntervalHandler() {};
     public:
         virtual void begin() {};
-        virtual void loopTick() {};
+        virtual void loopTick();
+        void setTickInterval(uint32_t interval);
         void shutdown();
 };
 
@@ -32,14 +36,13 @@ class _SWProtocolBase {
 class _SWProtocolTx: public _SWProtocolBase {
     protected:
         uint32_t pin;
-        uint32_t lastTick;
         _SWProtocolTx(uint32_t txpin, uint8_t *buffer, size_t bufferSize):
             _SWProtocolBase(buffer, bufferSize), pin(txpin) {};
         void updateCRC();
         void sendBit(uint8_t value);
         void sendPreamble();
+        void tickIntervalHandler();
     public:
-        void loopTick();
         bool setByte(uint8_t idx, uint8_t value);
         void sendMessage();
 };

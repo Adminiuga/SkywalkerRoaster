@@ -11,7 +11,6 @@
 #define SWPROT_RX_PREAMBLE_ATTEMPTS 60
 #define SWPROT_RX_PREAMBLE_LOW_US   7000U
 #define SWPROT_RX_1_LENGTH_US       1200U
-#define MESAGE_SEND_INTERVAL_US     200000UL
 #define MESSAGE_TIMEOUT_MS          3000UL
 
 
@@ -46,6 +45,25 @@ void _SWProtocolBase::_clearBuffer() {
 
 void _SWProtocolBase::shutdown() {
     return _clearBuffer();
+}
+
+
+/*
+ * Process loop tick. Call interval handler on defined interval
+ */
+void _SWProtocolBase::loopTick() {
+    if ((micros() - lastTick) < tickInterval) return;
+
+    tickIntervalHandler();
+    lastTick = micros();
+}
+
+
+/*
+ * Loop interval setter
+ */
+void _SWProtocolBase::setTickInterval(uint32_t interval) {
+    tickInterval = interval;
 }
 
 
@@ -121,10 +139,10 @@ bool _SWProtocolTx::setByte(uint8_t idx, uint8_t value) {
 
 
 /*
- * Process loop iteration
+ * Send frame on interval
  */
-void _SWProtocolTx::loopTick() {
-    if ((micros() - lastTick) < MESAGE_SEND_INTERVAL_US) return;
+void _SWProtocolTx::tickIntervalHandler() {
+    if ((micros() - lastTick) < tickInterval) return;
 
     sendMessage();
     lastTick = micros();
