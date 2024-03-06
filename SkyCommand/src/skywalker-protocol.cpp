@@ -19,6 +19,7 @@
  */
 _SWProtocolBase::_SWProtocolBase(uint8_t *buffer, size_t bufferSize) : buffer(buffer), bufferSize(bufferSize) {
     _clearBuffer();
+    tickInterval = 0;
 };
 
 
@@ -240,7 +241,7 @@ bool _SWProtocolRx::receiveFrame() {
  * receive the message
  */
 bool _SWProtocolRx::getMessage() {
-  if ( !( getMessage() and verifyCRC())) {
+  if ( !( receiveFrame() and verifyCRC())) {
     // timeout receiving message or receiving it correctly
     attemptCount++;
     return isSynchronized();
@@ -257,4 +258,12 @@ bool _SWProtocolRx::getMessage() {
   lastSuccRx = micros();
 
   return true;
+}
+
+
+/*
+ * Receiver tick handler
+ */
+void _SWProtocolRx::tickIntervalHandler() {
+  getMessage();
 }
