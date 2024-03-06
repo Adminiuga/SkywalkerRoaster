@@ -418,6 +418,7 @@ void setup() {
   setupLCD();
 
   roasterController.begin();
+  roasterController.setTickInterval(ROASTER_SEND_MESSAGE_INTERVAL_US);
   roasterController.shutdown();
 
   welcomeLCD();
