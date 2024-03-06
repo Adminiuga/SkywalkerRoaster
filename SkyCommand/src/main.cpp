@@ -30,7 +30,7 @@ typedef struct {
   uint8_t drum;
 } t_stateRoaster;
 
-uint8_t receiveBuffer[ROASTER_MESSAGE_LENGTH];
+SWRoasterRx    roasterRx;
 SWControllerTx roasterController;
 t_stateRoaster roasterState;
 
@@ -175,8 +175,12 @@ double calculateTemp() {
     using a 4th degree polynomial to model this but I sure can't seem to figure it out. 
   */
 
-  double x = ((receiveBuffer[0] << 8) + receiveBuffer[1]) / 1000.0;
-  double y = ((receiveBuffer[2] << 8) + receiveBuffer[3]) / 1000.0;
+  uint8_t b1, b2;
+  roasterRx.getByte(0, &b1); roasterRx.getByte(1, &b2);
+  double x = ((b1 << 8) + b2) / 1000.0;
+
+  roasterRx.getByte(2, &b1); roasterRx.getByte(3, &b2);
+  double y = ((b1 << 8) + b2) / 1000.0;
 
   DEBUG(x);
   DEBUG(',');
@@ -197,91 +201,6 @@ double calculateTemp() {
   if ( state.cfg.CorF == 'C' ) v = (v - 32) * 5 / 9;
 
   return v;
-}
-
-bool getMessage(int bytes, int pin) {
-  unsigned long pulseDuration = 0;
-  int bits = bytes * 8;
-
-  // clear buffer and reset checksum
-  for (uint8_t i=0; i < ROASTER_MESSAGE_LENGTH; i++) {
-    receiveBuffer[i] = 0;
-  }
-
-  uint8_t attempts = 0;
-  bool preambleDetected = false;
-  do {
-    pulseDuration = pulseIn(pin, LOW, ROASTER_PREAMBLE_LENGTH_US << 2);
-    if ( pulseDuration >= ROASTER_PREAMBLE_LENGTH_US) {
-      preambleDetected = true;
-      break;
-    }
-    attempts++;
-  } while (attempts <= MESSAGE_PREAMBLE_MAX_ATTEMPTS);
-
-  if (!preambleDetected) {
-    WARN(F("Did not detect preamble after "));
-    WARN(attempts);
-    WARNLN(F(" attempts"));
-    return false;
-  }
-
-  for (int i = 0; i < bits; i++) {  //Read the proper number of bits..
-    pulseDuration = pulseIn(pin, LOW);
-    if (pulseDuration == 0) {
-      WARN(F("Failed to get bit #"));
-      WARNLN(i);
-      return false;
-    }
-    //Bits are received in LSB order..
-    if (pulseDuration > ROASTER_ONE_LENGTH_US) {  // we received a 1
-      receiveBuffer[i / 8] |= (1 << (i % 8));
-    }
-  }
-
-  return true;
-}
-
-bool calculateRoasterChecksum() {
-  uint8_t sum = 0;
-  for (unsigned int i = 0; i < (ROASTER_MESSAGE_LENGTH - 1); i++) {
-    sum += receiveBuffer[i];
-  }
-
-  DEBUG(F("sum: "));
-  DEBUG(sum, HEX);
-  DEBUG(F(" Checksum Byte: "));
-  DEBUGLN(receiveBuffer[ROASTER_MESSAGE_LENGTH - 1], HEX);
-  return sum == receiveBuffer[ROASTER_MESSAGE_LENGTH - 1];
-}
-
-
-bool getRoasterMessage() {
-  DEBUG(F("R "));
-
-  static unsigned int count = 0;
-
-  if ( !( getMessage(ROASTER_MESSAGE_LENGTH, CONTROLLER_PIN_RX)
-          and calculateRoasterChecksum())) {
-    // timeout receiving message or receiving it correctly
-    count++;
-    WARN(F("Failed to get message, attempt #"));
-    WARNLN(count);
-    return (count < MESSAGE_RX_MAX_ATTEMPTS)
-           && (state.status.isSynchronized);
-  }
-
-  // received message and passed checksum verification
-
-  if (count > 0) {
-    WARN(F("[!] WARN: Took "));
-    WARN(count);
-    WARNLN(F(" tries to read roaster."));
-  }
-  count = 0;
-
-  TEMPERATURE_ROASTER(state.reported) = calculateTemp();
-  return true;
 }
 
 void handleHEAT(uint8_t value) {
@@ -417,6 +336,7 @@ void setup() {
   Serial.setTimeout(100);
   setupLCD();
 
+  roasterRx.begin();
   roasterController.begin();
   roasterController.setTickInterval(ROASTER_SEND_MESSAGE_INTERVAL_US);
   roasterController.shutdown();
@@ -444,8 +364,10 @@ void loop() {
   }
 
   roasterController.loopTick();
-
-  state.status.isSynchronized = getRoasterMessage();
+  if (roasterRx.getMessage()) {
+    TEMPERATURE_ROASTER(state.reported) = calculateTemp();
+  }
+  state.status.isSynchronized = roasterRx.isSynchronized();
 
 #ifdef USE_THERMOCOUPLE
   state.status.tcStatus = processThermoCouple();

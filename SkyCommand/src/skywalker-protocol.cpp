@@ -203,7 +203,7 @@ bool _SWProtocolRx::receiveFrame() {
   uint8_t attempts = 0;
   bool preambleDetected = false;
   do {
-    pulseDuration = pulseIn(pin, LOW, SWPROT_RX_PREAMBLE_LOW_US << 2);
+    pulseDuration = pulseIn(pin, LOW, SWPROT_TICK_INTERVAL_US);
     if (pulseDuration == 0) {
         return false;
     } else if ( pulseDuration >= SWPROT_RX_PREAMBLE_LOW_US) {
@@ -244,7 +244,7 @@ bool _SWProtocolRx::getMessage() {
   if ( !( receiveFrame() and verifyCRC())) {
     // timeout receiving message or receiving it correctly
     attemptCount++;
-    return isSynchronized();
+    return false;
   }
 
   // received message and passed checksum verification
