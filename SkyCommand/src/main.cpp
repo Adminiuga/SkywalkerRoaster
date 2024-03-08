@@ -35,14 +35,14 @@ t_State state = {
   // t_StateCommanded
   {0, 0, 0, 0, 0},
   // t_StateReported
-  {0, 0, 0, 0},
+  {0, 0},
   // t_Config
   {
     // chanMapping
 #ifdef USE_THERMOCOUPLE
-    {TEMPERATURE_CHANNEL_ROASTER+1, TEMPERATURE_CHANNEL_THERMOCOUPLE+1, 0, 0},
+    {TEMPERATURE_CHANNEL_ROASTER+1, TEMPERATURE_CHANNEL_THERMOCOUPLE+1},
 #else
-    {0, TEMPERATURE_CHANNEL_ROASTER+1, 0, 0},
+    {0, TEMPERATURE_CHANNEL_ROASTER+1},
 #endif // USE_THERMOCOUPLE
     'F',
   },
@@ -241,10 +241,10 @@ void handleDRUM(uint8_t value) {
 void handleREAD() {
   Serial.print(F("0.0"));
   uint8_t mapping = 0;
-  for (uint8_t i = 0; i < TEMPERATURE_CHANNELS_MAX; i++) {
+  for (uint8_t i = 0; i < TEMPERATURE_CHANNELS_NUMBER; i++) {
     mapping = state.cfg.chanMapping[i];
     if ((mapping >= 1)
-        && (mapping <= TEMPERATURE_CHANNELS_MAX)) {
+        && (mapping <= TEMPERATURE_CHANNELS_NUMBER)) {
         Serial.print(F(","));
         Serial.print(state.reported.chanTemp[mapping - 1]);
     }
@@ -270,7 +270,7 @@ bool itsbeentoolong() {
 }
 
 void handleCHAN(String channels) {
-  if (channels.length() != TEMPERATURE_CHANNELS_MAX) {
+  if (channels.length() != TEMPERATURE_CHANNELS_NUMBER) {
     WARN(F("Ignoring channels command, as "));
     WARN(channels);
     WARN(F(" does not match the number of supported channels"));
@@ -283,12 +283,12 @@ void handleCHAN(String channels) {
   Serial.print(F("# Active channels set to "));
   char strbuf[2];
   int chanNum;
-  for (uint8_t i = 0; i < TEMPERATURE_CHANNELS_MAX; i++) {
+  for (uint8_t i = 0; i < TEMPERATURE_CHANNELS_NUMBER; i++) {
     strbuf[0] = channels.charAt(i);
     strbuf[1] = '\0';
     chanNum = atoi(strbuf);
     if ( (chanNum >= 0)
-         && (chanNum <= TEMPERATURE_CHANNELS_MAX)) {
+         && (chanNum <= TEMPERATURE_CHANNELS_NUMBER)) {
           state.cfg.chanMapping[i] = chanNum;
           Serial.print(chanNum);
     } else {
