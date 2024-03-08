@@ -22,17 +22,9 @@
 #include "logging.h"
 #include "skywalker-protocol.h"
 
-typedef struct {
-  uint8_t heat;
-  uint8_t vent;
-  uint8_t cool;
-  uint8_t filter;
-  uint8_t drum;
-} t_stateRoaster;
 
 SWRoasterRx    roasterRx;
 SWControllerTx roasterController;
-t_stateRoaster roasterState;
 
 /*
  * Until this is replaced by an Class, this structure
