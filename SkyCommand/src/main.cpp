@@ -19,9 +19,20 @@
 #endif
 
 #include "roaster.h"
+#include "logging.h"
+#include "skywalker-protocol.h"
 
-uint8_t receiveBuffer[ROASTER_MESSAGE_LENGTH];
-uint8_t sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH];
+typedef struct {
+  uint8_t heat;
+  uint8_t vent;
+  uint8_t cool;
+  uint8_t filter;
+  uint8_t drum;
+} t_stateRoaster;
+
+SWRoasterRx    roasterRx;
+SWControllerTx roasterController;
+t_stateRoaster roasterState;
 
 /*
  * Until this is replaced by an Class, this structure
@@ -157,58 +168,6 @@ void updateLCD(void) {
 #endif
 
 
-void setControlChecksum() {
-  uint8_t sum = 0;
-  for (unsigned int i = 0; i < (ROASTER_CONTROLLER_MESSAGE_LENGTH - 1); i++) {
-    sum += sendBuffer[i];
-  }
-  sendBuffer[ROASTER_CONTROLLER_MESSAGE_LENGTH - 1] = sum;
-}
-
-void setValue(uint8_t* bytePtr, uint8_t v) {
-  *bytePtr = v;
-  setControlChecksum();  // Always keep the checksum updated.
-}
-
-void shutdown() {  //Turn everything off!
-  for (unsigned int i = 0; i < ROASTER_CONTROLLER_MESSAGE_LENGTH; i++) {
-    sendBuffer[i] = 0;
-  }
-}
-
-void pulsePin(int pin, int duration) {
-  //Assuming pin is HIGH when we get it
-  digitalWrite(pin, LOW);
-  delayMicroseconds(duration);
-  digitalWrite(pin, HIGH);
-  //we leave it high
-}
-
-void sendMessage() {
-  //send Preamble
-  static unsigned long lastTick = micros();
-
-  if ((micros() - lastTick) < ROASTER_SEND_MESSAGE_INTERVAL_US) {
-    return;
-  }
-  lastTick = micros();
-
-  pulsePin(CONTROLLER_PIN_TX, 7500);
-  delayMicroseconds(3800);
-
-  //send Message
-  for (unsigned int i = 0; i < ROASTER_CONTROLLER_MESSAGE_LENGTH; i++) {
-    for (int j = 0; j < 8; j++) {
-      if (bitRead(sendBuffer[i], j) == 1) {
-        pulsePin(CONTROLLER_PIN_TX, 1500);  //delay for a 1
-      } else {
-        pulsePin(CONTROLLER_PIN_TX, 650);  //delay for a 0
-      }
-      delayMicroseconds(750);  //delay between bits
-    }
-  }
-}
-
 double calculateTemp() {
   /* 
     I really hate this. 
@@ -216,8 +175,12 @@ double calculateTemp() {
     using a 4th degree polynomial to model this but I sure can't seem to figure it out. 
   */
 
-  double x = ((receiveBuffer[0] << 8) + receiveBuffer[1]) / 1000.0;
-  double y = ((receiveBuffer[2] << 8) + receiveBuffer[3]) / 1000.0;
+  uint8_t b1, b2;
+  roasterRx.getByte(0, &b1); roasterRx.getByte(1, &b2);
+  double x = ((b1 << 8) + b2) / 1000.0;
+
+  roasterRx.getByte(2, &b1); roasterRx.getByte(3, &b2);
+  double y = ((b1 << 8) + b2) / 1000.0;
 
   DEBUG(x);
   DEBUG(',');
@@ -240,95 +203,10 @@ double calculateTemp() {
   return v;
 }
 
-bool getMessage(int bytes, int pin) {
-  unsigned long pulseDuration = 0;
-  int bits = bytes * 8;
-
-  // clear buffer and reset checksum
-  for (uint8_t i=0; i < ROASTER_MESSAGE_LENGTH; i++) {
-    receiveBuffer[i] = 0;
-  }
-
-  uint8_t attempts = 0;
-  bool preambleDetected = false;
-  do {
-    pulseDuration = pulseIn(pin, LOW, ROASTER_PREAMBLE_LENGTH_US << 2);
-    if ( pulseDuration >= ROASTER_PREAMBLE_LENGTH_US) {
-      preambleDetected = true;
-      break;
-    }
-    attempts++;
-  } while (attempts <= MESSAGE_PREAMBLE_MAX_ATTEMPTS);
-
-  if (!preambleDetected) {
-    WARN(F("Did not detect preamble after "));
-    WARN(attempts);
-    WARNLN(F(" attempts"));
-    return false;
-  }
-
-  for (int i = 0; i < bits; i++) {  //Read the proper number of bits..
-    pulseDuration = pulseIn(pin, LOW);
-    if (pulseDuration == 0) {
-      WARN(F("Failed to get bit #"));
-      WARNLN(i);
-      return false;
-    }
-    //Bits are received in LSB order..
-    if (pulseDuration > ROASTER_ONE_LENGTH_US) {  // we received a 1
-      receiveBuffer[i / 8] |= (1 << (i % 8));
-    }
-  }
-
-  return true;
-}
-
-bool calculateRoasterChecksum() {
-  uint8_t sum = 0;
-  for (unsigned int i = 0; i < (ROASTER_MESSAGE_LENGTH - 1); i++) {
-    sum += receiveBuffer[i];
-  }
-
-  DEBUG(F("sum: "));
-  DEBUG(sum, HEX);
-  DEBUG(F(" Checksum Byte: "));
-  DEBUGLN(receiveBuffer[ROASTER_MESSAGE_LENGTH - 1], HEX);
-  return sum == receiveBuffer[ROASTER_MESSAGE_LENGTH - 1];
-}
-
-
-bool getRoasterMessage() {
-  DEBUG(F("R "));
-
-  static unsigned int count = 0;
-
-  if ( !( getMessage(ROASTER_MESSAGE_LENGTH, CONTROLLER_PIN_RX)
-          and calculateRoasterChecksum())) {
-    // timeout receiving message or receiving it correctly
-    count++;
-    WARN(F("Failed to get message, attempt #"));
-    WARNLN(count);
-    return (count < MESSAGE_RX_MAX_ATTEMPTS)
-           && (state.status.isSynchronized);
-  }
-
-  // received message and passed checksum verification
-
-  if (count > 0) {
-    WARN(F("[!] WARN: Took "));
-    WARN(count);
-    WARNLN(F(" tries to read roaster."));
-  }
-  count = 0;
-
-  TEMPERATURE_ROASTER(state.reported) = calculateTemp();
-  return true;
-}
-
 void handleHEAT(uint8_t value) {
   if (value >= 0 && value <= 100) {
     state.commanded.heat = value;
-    setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_HEAT], value);
+    roasterController.setByte(ROASTER_MESSAGE_BYTE_HEAT, value);
   }
   state.status.tc4LastTick = micros();
 }
@@ -336,7 +214,7 @@ void handleHEAT(uint8_t value) {
 void handleVENT(uint8_t value) {
   if (value >= 0 && value <= 100) {
     state.commanded.vent = value;
-    setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_VENT], value);
+    roasterController.setByte(ROASTER_MESSAGE_BYTE_VENT, value);
   }
   state.status.tc4LastTick = micros();
 }
@@ -344,7 +222,7 @@ void handleVENT(uint8_t value) {
 void handleCOOL(uint8_t value) {
   if (value >= 0 && value <= 100) {
     state.commanded.cool = value;
-    setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_COOL], value);
+    roasterController.setByte(ROASTER_MESSAGE_BYTE_COOL, value);
   }
   state.status.tc4LastTick = micros();
 }
@@ -352,7 +230,7 @@ void handleCOOL(uint8_t value) {
 void handleFILTER(uint8_t value) {
   if (value >= 0 && value <= 100) {
     state.commanded.filter = value;
-    setValue(&sendBuffer[ROASTER_MESSAGE_BYTE_FILTER], value);
+    roasterController.setByte(ROASTER_MESSAGE_BYTE_FILTER, value);
   }
   state.status.tc4LastTick = micros();
 }
@@ -360,10 +238,10 @@ void handleFILTER(uint8_t value) {
 void handleDRUM(uint8_t value) {
   if (value != 0) {
     state.commanded.drum = 100;
-    setValue(&sendBuffer[ROATER_MESSAGE_BYTE_DRUM], 100);
+    roasterController.setByte(ROATER_MESSAGE_BYTE_DRUM, 100);
   } else {
     state.commanded.drum = 0;
-    setValue(&sendBuffer[ROATER_MESSAGE_BYTE_DRUM], 0);
+    roasterController.setByte(ROATER_MESSAGE_BYTE_DRUM, 0);
   }
   state.status.tc4LastTick = micros();
 }
@@ -393,7 +271,7 @@ bool itsbeentoolong() {
   ustick_t now = micros();
   ustick_t duration = now - state.status.tc4LastTick;
   if (duration > (TC4_COMM_TIMEOUT_MS * 1000)) {
-    shutdown();  //We turn everything off
+    roasterController.shutdown();  //We turn everything off
   }
 
   return duration > (TC4_COMM_TIMEOUT_MS * 1000);
@@ -458,8 +336,10 @@ void setup() {
   Serial.setTimeout(100);
   setupLCD();
 
-  pinMode(CONTROLLER_PIN_TX, OUTPUT);
-  shutdown();
+  roasterRx.begin();
+  roasterController.begin();
+  roasterController.setTickInterval(ROASTER_SEND_MESSAGE_INTERVAL_US);
+  roasterController.shutdown();
 
   welcomeLCD();
 
@@ -480,12 +360,14 @@ void loop() {
     //That way if the arduino is having issues, the interrupt handler
     //Will stop sending messages to the roaster and it'll shut down.
 
-    shutdown();
+    roasterController.shutdown();
   }
 
-  sendMessage();
-
-  state.status.isSynchronized = getRoasterMessage();
+  roasterController.loopTick();
+  if (roasterRx.getMessage()) {
+    TEMPERATURE_ROASTER(state.reported) = calculateTemp();
+  }
+  state.status.isSynchronized = roasterRx.isSynchronized();
 
 #ifdef USE_THERMOCOUPLE
   state.status.tcStatus = processThermoCouple();
@@ -513,7 +395,7 @@ void loop() {
     } else if (command == "OT2") { //Set Fan Duty
       handleVENT(value);
     } else if (command == "OFF") { //Shut it down
-      shutdown();
+      roasterController.shutdown();
     } else if (command == "DRUM") {//Start the drum
       handleDRUM(value);
     } else if (command == "FILTER") { //Turn on the filter fan

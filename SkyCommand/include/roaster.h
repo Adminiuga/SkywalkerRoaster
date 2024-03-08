@@ -18,7 +18,7 @@
 #define TC4_COMM_TIMEOUT_MS                 10000UL
 
 // interval of sending message to the roaster
-#define ROASTER_SEND_MESSAGE_INTERVAL_US    200000UL
+#define ROASTER_SEND_MESSAGE_INTERVAL_US    125000UL
 
 // declare sync loss if fail to receive message n times
 #define MESSAGE_RX_MAX_ATTEMPTS             5
@@ -69,20 +69,5 @@ typedef struct {
     t_Status            status;
 } t_State;
 
-
-#ifdef __DEBUG__
-#define DEBUG(...) Serial.print(__VA_ARGS__)
-#define DEBUGLN(...) Serial.println(__VA_ARGS__)
-#else
-#define DEBUG(...)
-#define DEBUGLN(...)
-#endif
-#ifdef __WARN__
-#define WARN(...) Serial.print(__VA_ARGS__)
-#define WARNLN(...) Serial.println(__VA_ARGS__)
-#else
-#define WARN(...)
-#define WARNLN(...)
-#endif
 
 #endif  // __ROASTER_H
