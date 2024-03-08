@@ -1,12 +1,5 @@
 #include <Arduino.h>
 
-#ifdef USE_LCD
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-#endif
-
 #ifdef ARDUINO_BLACKPILL_F411CE
 #include <f4/bootloader.h>
 #ifndef CMD_DFU_TIMEOUT_US
