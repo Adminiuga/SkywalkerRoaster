@@ -6,20 +6,20 @@
 
 #include "roaster.h"
 #include "thermocouple.h"
+#include "tick-timer.h"
 
 extern t_State state;
 static MAX6675 thermoCouple(MAX_CS_PIN, &SPI);
+static TimerMS timer(THERMOCOUPLE_UPDATE_INTERVAL_MS);
 
 uint8_t processThermoCouple(void) {
-    static ustick_t lastTick = 0;
-    ustick_t tick = micros();
-    if ((tick - lastTick)
-        < (THERMOCOUPLE_UPDATE_INTERVAL_MS * 1000)) {
+
+    if ( ! (timer.hasTicked())) {
         // not yet our time
         return 0;
     }
+    timer.reset();
 
-    lastTick = tick;
     int status = thermoCouple.read();
     if (status == 0) {
         if (state.cfg.CorF == 'C') {
