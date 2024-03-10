@@ -301,23 +301,21 @@ void handleCHAN(String channels) {
 
 #ifdef ARDUINO_BLACKPILL_F411CE
 void handleDFUCommand(int response) {
-  static ustick_t lastTick = 0;
+  static TimerUS dfuTimer(CMD_DFU_TIMEOUT_US);
   static int challenge = 0;
-  ustick_t now = micros();
 
   if ( response == 0 || challenge == 0) {
     // challenge bootloader trigger command
-    challenge = now & 0x0FFF;
+    challenge = micros() & 0x0FFF;
     Serial.print(F("DFU challenge: "));
     Serial.println(challenge);
-    lastTick = now;
+    dfuTimer.reset();
   } else {
-    if ((now - lastTick) <= CMD_DFU_TIMEOUT_US && response == challenge) {
+    if ( (!dfuTimer.hasTicked()) && response == challenge) {
       // got challenge respone before the timeout
       JumpToBootloader();
     } else {
       challenge = 0;
-      lastTick = 0;
     }
   }
 
