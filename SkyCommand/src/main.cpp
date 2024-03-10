@@ -21,6 +21,7 @@
 #include "roaster.h"
 #include "logging.h"
 #include "skywalker-protocol.h"
+#include "tick-timer.h"
 
 
 SWRoasterRx    roasterRx;
