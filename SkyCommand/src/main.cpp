@@ -21,6 +21,9 @@
 
 SWRoasterRx    roasterRx;
 SWControllerTx roasterController;
+#ifdef USE_LCD
+UI::UI lcd;
+#endif
 
 /*
  * Until this is replaced by an Class, this structure
@@ -228,8 +231,7 @@ void setup() {
   roasterController.shutdown();
 
 #ifdef USE_LCD
-  setupLCD();
-  welcomeLCD();
+  lcd.begin();
 #endif
 
 #ifdef USE_THERMOCOUPLE
@@ -307,6 +309,6 @@ void loop() {
   }
 
 #ifdef USE_LCD
-  updateLCD(&state);
+  lcd.update(&state);
 #endif
 }

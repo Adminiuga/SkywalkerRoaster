@@ -3,20 +3,11 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 
 #include "lcd.h"
 #include "state.h"
 
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
-void setupLCD(void) {
-  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-      Serial.println(F("SSD1306 allocation failed"));
-      for(;;);
-  }
-}
-
+/*
 void welcomeLCD() {
   display.clearDisplay();
 
@@ -28,8 +19,9 @@ void welcomeLCD() {
   display.println(F(SKYDUINO_VERSION));
   display.display();
 }
+*/
 
-void updateLCD(t_State *state) {
+void UI::UI::update(t_State *state) {
   static uint32_t lcd_last_tick = millis() + UPDATE_LCD_PERIOD_MS - 1;
   static bool invert_text = false;
 
@@ -98,3 +90,14 @@ void updateLCD(t_State *state) {
   }
   display.display();
 }
+
+UI::UI::UI() {
+  display = Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
+};
+
+void UI::UI::begin() {
+  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+      Serial.println(F("SSD1306 allocation failed"));
+      for(;;);
+  }
+};
