@@ -1,6 +1,8 @@
 #ifndef _SW_STATE_H
 #define _SW_STATE_H
 
+#include "tick-timer.h"
+
 typedef struct {
   uint8_t heat;
   uint8_t vent;
@@ -19,7 +21,7 @@ typedef struct {
 } t_Config;
 
 typedef struct {
-    uint32_t tc4LastTick;
+    TimerMS tc4ComTimeOut;
     bool isSynchronized;
 #ifdef USE_THERMOCOUPLE
     uint8_t tcStatus;
