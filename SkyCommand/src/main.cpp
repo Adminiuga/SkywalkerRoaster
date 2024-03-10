@@ -21,6 +21,7 @@
 #include "roaster.h"
 #include "logging.h"
 #include "skywalker-protocol.h"
+#include "tick-timer.h"
 
 
 SWRoasterRx    roasterRx;
@@ -48,8 +49,8 @@ t_State state = {
   },
   // t_Status
   {
-    0,      // tc4LastTick
-    false,  // isSynchronized
+    TimerMS(TC4_COMM_TIMEOUT_MS),      // tc4ComTimeOut
+    false,                             // isSynchronized
 #ifdef USE_THERMOCOUPLE
     1       // tcStatus
 #endif
@@ -200,7 +201,7 @@ void handleHEAT(uint8_t value) {
     state.commanded.heat = value;
     roasterController.setByte(ROASTER_MESSAGE_BYTE_HEAT, value);
   }
-  state.status.tc4LastTick = micros();
+  state.status.tc4ComTimeOut.reset();
 }
 
 void handleVENT(uint8_t value) {
@@ -208,7 +209,7 @@ void handleVENT(uint8_t value) {
     state.commanded.vent = value;
     roasterController.setByte(ROASTER_MESSAGE_BYTE_VENT, value);
   }
-  state.status.tc4LastTick = micros();
+  state.status.tc4ComTimeOut.reset();
 }
 
 void handleCOOL(uint8_t value) {
@@ -216,7 +217,7 @@ void handleCOOL(uint8_t value) {
     state.commanded.cool = value;
     roasterController.setByte(ROASTER_MESSAGE_BYTE_COOL, value);
   }
-  state.status.tc4LastTick = micros();
+  state.status.tc4ComTimeOut.reset();
 }
 
 void handleFILTER(uint8_t value) {
@@ -224,7 +225,7 @@ void handleFILTER(uint8_t value) {
     state.commanded.filter = value;
     roasterController.setByte(ROASTER_MESSAGE_BYTE_FILTER, value);
   }
-  state.status.tc4LastTick = micros();
+  state.status.tc4ComTimeOut.reset();
 }
 
 void handleDRUM(uint8_t value) {
@@ -235,7 +236,7 @@ void handleDRUM(uint8_t value) {
     state.commanded.drum = 0;
     roasterController.setByte(ROATER_MESSAGE_BYTE_DRUM, 0);
   }
-  state.status.tc4LastTick = micros();
+  state.status.tc4ComTimeOut.reset();
 }
 
 void handleREAD() {
@@ -256,17 +257,20 @@ void handleREAD() {
   Serial.print(',');
   Serial.println(F("0"));
 
-  state.status.tc4LastTick = micros();
+  state.status.tc4ComTimeOut.reset();
 }
 
 bool itsbeentoolong() {
-  ustick_t now = micros();
-  ustick_t duration = now - state.status.tc4LastTick;
-  if (duration > (TC4_COMM_TIMEOUT_MS * 1000)) {
+  if (state.status.tc4ComTimeOut.hasTicked()) {
+    state.commanded.heat   = 0;
+    state.commanded.vent   = 0;
+    state.commanded.cool   = 0;
+    state.commanded.filter = 0;
+    state.commanded.drum   = 0;
     roasterController.shutdown();  //We turn everything off
   }
 
-  return duration > (TC4_COMM_TIMEOUT_MS * 1000);
+  return state.status.tc4ComTimeOut.hasTicked();
 }
 
 void handleCHAN(String channels) {
@@ -296,27 +300,26 @@ void handleCHAN(String channels) {
     }
   }
   Serial.println();
+  state.status.tc4ComTimeOut.reset();
 }
 
 #ifdef ARDUINO_BLACKPILL_F411CE
 void handleDFUCommand(int response) {
-  static ustick_t lastTick = 0;
+  static TimerUS dfuTimer(CMD_DFU_TIMEOUT_US);
   static int challenge = 0;
-  ustick_t now = micros();
 
   if ( response == 0 || challenge == 0) {
     // challenge bootloader trigger command
-    challenge = now & 0x0FFF;
+    challenge = micros() & 0x0FFF;
     Serial.print(F("DFU challenge: "));
     Serial.println(challenge);
-    lastTick = now;
+    dfuTimer.reset();
   } else {
-    if ((now - lastTick) <= CMD_DFU_TIMEOUT_US && response == challenge) {
+    if ( (!dfuTimer.hasTicked()) && response == challenge) {
       // got challenge respone before the timeout
       JumpToBootloader();
     } else {
       challenge = 0;
-      lastTick = 0;
     }
   }
 
